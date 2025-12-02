@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BottyOtty Reports & Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .chart-container {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .permission-error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 500px;
+    }
+
+    .permission-error h2 {
+      color: #ef4444;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    .permission-error p {
+      color: #666;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .section-header h2 {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div id="permissionError" style="display: none;">
+    <div class="permission-error">
+      <h2>🔒 Access Denied</h2>
+      <p>You don't have permission to access Reports & Analytics. This tool requires the <strong>canViewAnalytics</strong> permission.</p>
+      <p>Please contact an administrator if you need access.</p>
+      <a href="BottyOtty Dashboard v18.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all inline-block">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const STORAGE_KEY_USER = 'bottyotty-current-user';
+    const STORAGE_KEY_TASKS = 'bottyotty-tasks';
+
+    // Team members (synced with Dashboard)
+    const TEAM_MEMBERS = [
+      { name: 'Dakota', discordId: '220326831524544513' },
+      { name: 'Preston', discordId: '1060679174945259520' },
+      { name: 'Dahlya', discordId: '367146081248608257' },
+      { name: 'Araceli', discordId: '343265486919958529' },
+      { name: 'Terry', discordId: '528700749555957771' },
+      { name: 'Cole', discordId: '1317654177412939799' },
+      { name: 'Devin', discordId: '680757425514479662' },
+      { name: 'Tony', discordId: '1351211310796242977' },
+      { name: 'Chase', discordId: '1297804315041333354' },
+      { name: 'Megan', discordId: '928725439059464222' },
+      { name: 'Adam', discordId: '353922166250799106' },
+      { name: 'Amanda', discordId: '1203398569575452745' },
+      { name: 'Ash', discordId: '289212918615244801' },
+      { name: 'Caleb', discordId: '423987581483483146' },
+      { name: 'Charles', discordId: '262990512506667009' },
+      { name: 'Dylan', discordId: '1229532562200723556' },
+      { name: 'Edward', discordId: '1277407641479548928' },
+      { name: 'Fernando', discordId: '1242209699135230012' },
+      { name: 'Hector', discordId: '1102917622443540511' },
+      { name: 'Isiac', discordId: '1167611497812340813' },
+      { name: 'Jeff', discordId: '1239615123765596291' },
+      { name: 'Joey', discordId: '1228184859772588042' },
+      { name: 'Jose', discordId: '1060679251235442719' },
+      { name: 'Matt Kiger', discordId: '792234508736135178' },
+      { name: 'Lauren', discordId: '931331954220101632' },
+      { name: 'Logan', discordId: '934632146134519820' },
+      { name: 'Nathaniel', discordId: '765857167290662913' },
+      { name: 'Presley', discordId: '1189283572100645005' },
+      { name: 'Rachel', discordId: '1363874133410189443' },
+      { name: 'Rafael', discordId: '1354099291177750690' },
+      { name: 'Raymond', discordId: '1281670710271410279' },
+      { name: 'Ric', discordId: '1363551896530587760' },
+      { name: 'Ryan M', discordId: '326967402606624769' },
+      { name: 'Ryan P', discordId: '1422223702040383529' },
+      { name: 'Sam', discordId: '883800050524905552' },
+      { name: 'Sean', discordId: '1385598726361583616' },
+      { name: 'Summer', discordId: '908784314056052748' },
+      { name: 'Trevor', discordId: '1127672956051525755' },
+      { name: 'Tyler', discordId: '1119490397626974280' }
+    ];
+
+    const DEFAULT_USER_CONFIG = {
+      canViewAnalytics: false,
+      canViewTransferMetrics: false,
+      canViewStatusMetrics: false,
+      canViewEscalations: false,
+      canViewTeamReports: false,
+      canViewPerformanceMetrics: false,
+      canViewPoolAnalytics: false,
+      canViewSkillPriority: false,
+      canViewTrends: false,
+      canExportReports: false,
+      isAdmin: false,
+      isManager: false
+    };
+
+    function App() {
+      const [currentUser, setCurrentUser] = useState(null);
+      const [userPermissions, setUserPermissions] = useState(DEFAULT_USER_CONFIG);
+      const [tasks, setTasks] = useState([]);
+      const [activeSection, setActiveSection] = useState('overview');
+
+      useEffect(() => {
+        loadUser();
+        loadTasks();
+      }, []);
+
+      const loadUser = () => {
+        const storedUser = localStorage.getItem(STORAGE_KEY_USER);
+
+        if (!storedUser) {
+          document.getElementById('permissionError').style.display = 'block';
+          document.getElementById('root').style.display = 'none';
+          return;
+        }
+
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user);
+
+        // Load permissions
+        const storedPermissions = localStorage.getItem('bottyotty-user-permissions');
+        let userPerms = { ...DEFAULT_USER_CONFIG };
+
+        if (storedPermissions) {
+          try {
+            const allPermissions = JSON.parse(storedPermissions);
+            userPerms = { ...DEFAULT_USER_CONFIG, ...(allPermissions[user.name] || {}) };
+          } catch (e) {
+            console.error('Failed to load permissions:', e);
+          }
+        }
+
+        setUserPermissions(userPerms);
+
+        // Check base permission
+        if (!userPerms.canViewAnalytics && !userPerms.isAdmin) {
+          console.error('Access denied: canViewAnalytics is', userPerms.canViewAnalytics);
+          document.getElementById('permissionError').style.display = 'block';
+          document.getElementById('root').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('permissionError').style.display = 'none';
+        document.getElementById('root').style.display = 'block';
+      };
+
+      const loadTasks = () => {
+        const storedTasks = localStorage.getItem(STORAGE_KEY_TASKS);
+        if (storedTasks) {
+          try {
+            setTasks(JSON.parse(storedTasks));
+          } catch (e) {
+            console.error('Failed to load tasks:', e);
+          }
+        }
+      };
+
+      // Calculate metrics
+      const completedTasks = tasks.filter(t => t.status === 'completed');
+      const activeTasks = tasks.filter(t => t.status === 'active');
+
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const completedToday = completedTasks.filter(t => {
+        if (!t.completedAt) return false;
+        const completedDate = new Date(t.completedAt).toISOString().split('T')[0];
+        return completedDate === todayStr;
+      });
+
+      const completedThisWeek = completedTasks.filter(t => {
+        if (!t.completedAt) return false;
+        return new Date(t.completedAt) >= weekAgo;
+      });
+
+      const completedThisMonth = completedTasks.filter(t => {
+        if (!t.completedAt) return false;
+        return new Date(t.completedAt) >= monthAgo;
+      });
+
+      // Transfer metrics
+      const transferRequests = tasks.filter(t => t.isTransferRequest || t.transferStatus);
+      const transfersAccepted = tasks.filter(t => t.transferStatus === 'accepted');
+      const transfersDenied = tasks.filter(t => t.transferStatus === 'denied');
+      const transfersPending = transferRequests.filter(t => t.transferStatus === 'pending' || !t.transferStatus);
+
+      // Status metrics
+      const statusChanges = tasks.filter(t => t.statusHistory && t.statusHistory.length > 0);
+
+      // Escalation metrics
+      const escalatedTasks = tasks.filter(t => t.escalatedAt || t.alertedManager);
+
+      // Team performance
+      const completionsByMember = {};
+      completedThisMonth.forEach(task => {
+        const member = task.completedBy || task.assignedTo || 'Unknown';
+        if (!completionsByMember[member]) {
+          completionsByMember[member] = [];
+        }
+        completionsByMember[member].push(task);
+      });
+
+      return (
+        <div className="min-h-screen p-4 md:p-8">
+          {/* Header */}
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <img
+                  src="/mnt/user-data/uploads/Botty_Otty_Logo.png"
+                  alt="BottyOtty"
+                  className="w-16 h-16 object-contain"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-1">📊 Reports & Analytics</h1>
+                  <p className="text-gray-200 text-sm">Logged in as: <strong>{currentUser?.name || 'Loading...'}</strong></p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <a
+                  href="BottyOtty Dashboard v18.html"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all"
+                >
+                  ← Dashboard
+                </a>
+                {userPermissions.isAdmin && (
+                  <a
+                    href="Admin Panel v18.html"
+                    className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all"
+                  >
+                    ⚙️ Admin
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section Navigation */}
+          <div className="glass rounded-xl p-4 mb-6">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveSection('overview')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  activeSection === 'overview'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                }`}
+              >
+                📊 Overview
+              </button>
+
+              {(userPermissions.canViewTransferMetrics || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('transfers')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'transfers'
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  🔄 Transfers
+                </button>
+              )}
+
+              {(userPermissions.canViewStatusMetrics || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('status')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'status'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  🆘 Status Tracking
+                </button>
+              )}
+
+              {(userPermissions.canViewEscalations || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('escalations')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'escalations'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  ⏰ Escalations
+                </button>
+              )}
+
+              {(userPermissions.canViewTeamReports || userPermissions.isAdmin || userPermissions.isManager) && (
+                <button
+                  onClick={() => setActiveSection('team')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'team'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  👥 Team Reports
+                </button>
+              )}
+
+              {(userPermissions.canViewPerformanceMetrics || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('performance')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'performance'
+                      ? 'bg-pink-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  ⏱️ Performance
+                </button>
+              )}
+
+              {(userPermissions.canViewPoolAnalytics || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('pool')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'pool'
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  🏊 Pool Analytics
+                </button>
+              )}
+
+              {(userPermissions.canViewSkillPriority || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('skillpriority')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'skillpriority'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  🎯 Skills & Priority
+                </button>
+              )}
+
+              {(userPermissions.canViewTrends || userPermissions.isAdmin) && (
+                <button
+                  onClick={() => setActiveSection('trends')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeSection === 'trends'
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'
+                  }`}
+                >
+                  📈 Trends
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Content Sections */}
+          <div className="space-y-6">
+            {/* OVERVIEW SECTION */}
+            {activeSection === 'overview' && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>📊 Overview - Summary Statistics</h2>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-blue-500">
+                    <p className="text-blue-200 text-sm mb-1 font-semibold">Active Tasks</p>
+                    <p className="text-white text-4xl font-bold">{activeTasks.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                    <p className="text-green-200 text-sm mb-1 font-semibold">Completed Today</p>
+                    <p className="text-white text-4xl font-bold">{completedToday.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-teal-500">
+                    <p className="text-teal-200 text-sm mb-1 font-semibold">This Week</p>
+                    <p className="text-white text-4xl font-bold">{completedThisWeek.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-purple-500">
+                    <p className="text-purple-200 text-sm mb-1 font-semibold">Last 30 Days</p>
+                    <p className="text-white text-4xl font-bold">{completedThisMonth.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-orange-500">
+                    <p className="text-orange-200 text-sm mb-1 font-semibold">Total Tasks</p>
+                    <p className="text-white text-4xl font-bold">{tasks.length}</p>
+                  </div>
+                </div>
+
+                {/* Team Performance */}
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">🏆 Team Performance (Last 30 Days)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(completionsByMember)
+                      .sort((a, b) => b[1].length - a[1].length)
+                      .map(([member, memberTasks]) => (
+                        <div key={member} className="glass-panel rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-white font-bold text-lg">{member}</p>
+                            <span className="px-3 py-1 bg-green-600 text-white rounded-full text-sm font-bold">
+                              {memberTasks.length}
+                            </span>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            {memberTasks.length} task{memberTasks.length !== 1 ? 's' : ''} completed
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                  {Object.keys(completionsByMember).length === 0 && (
+                    <p className="text-gray-300 text-center py-8">No completed tasks in the last 30 days</p>
+                  )}
+                </div>
+
+                {/* Recently Completed */}
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">✅ Recently Completed (Last 7 Days)</h3>
+                  {completedThisWeek.length > 0 ? (
+                    <div className="space-y-3">
+                      {completedThisWeek.slice(0, 10).map(task => (
+                        <div
+                          key={task.id}
+                          className="glass-panel rounded-lg p-4 hover:bg-opacity-20 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-white font-bold text-lg mb-1">{task.name}</h4>
+                              <div className="flex flex-wrap gap-2 items-center text-sm">
+                                <span className="text-green-400">✅ {task.completedBy || 'Unknown'}</span>
+                                {task.completedAt && (
+                                  <span className="text-gray-300">
+                                    • {new Date(task.completedAt).toLocaleDateString()} at {new Date(task.completedAt).toLocaleTimeString()}
+                                  </span>
+                                )}
+                              </div>
+                              {task.category && (
+                                <span className="inline-block mt-2 px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">
+                                  {task.category}
+                                </span>
+                              )}
+                            </div>
+                            {task.priority && (
+                              <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                                task.priority === 'urgent' ? 'bg-red-600 text-white' :
+                                task.priority === 'high' ? 'bg-orange-600 text-white' :
+                                task.priority === 'medium' ? 'bg-yellow-600 text-white' :
+                                'bg-green-600 text-white'
+                              }`}>
+                                {task.priority.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-300 text-center py-8">No tasks completed in the last 7 days</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TRANSFER METRICS SECTION */}
+            {activeSection === 'transfers' && (userPermissions.canViewTransferMetrics || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>🔄 Transfer Metrics & Analysis</h2>
+                </div>
+
+                {/* Transfer Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-yellow-500">
+                    <p className="text-yellow-200 text-sm mb-1 font-semibold">Total Transfers</p>
+                    <p className="text-white text-4xl font-bold">{transferRequests.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                    <p className="text-green-200 text-sm mb-1 font-semibold">Accepted</p>
+                    <p className="text-white text-4xl font-bold">{transfersAccepted.length}</p>
+                    <p className="text-green-300 text-xs mt-1">
+                      {transferRequests.length > 0 ? Math.round((transfersAccepted.length / transferRequests.length) * 100) : 0}% acceptance rate
+                    </p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                    <p className="text-red-200 text-sm mb-1 font-semibold">Denied</p>
+                    <p className="text-white text-4xl font-bold">{transfersDenied.length}</p>
+                    <p className="text-red-300 text-xs mt-1">
+                      {transferRequests.length > 0 ? Math.round((transfersDenied.length / transferRequests.length) * 100) : 0}% denial rate
+                    </p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-blue-500">
+                    <p className="text-blue-200 text-sm mb-1 font-semibold">Pending</p>
+                    <p className="text-white text-4xl font-bold">{transfersPending.length}</p>
+                  </div>
+                </div>
+
+                {/* Transfer Activity Timeline */}
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">📈 Recent Transfer Activity</h3>
+                  {transferRequests.length > 0 ? (
+                    <div className="space-y-3">
+                      {transferRequests.slice(0, 15).map(task => (
+                        <div key={task.id} className="glass-panel rounded-lg p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-white font-bold mb-1">{task.name}</h4>
+                              <div className="flex flex-wrap gap-2 items-center text-sm">
+                                <span className="text-blue-300">From: {task.transferFrom || 'Unknown'}</span>
+                                <span className="text-gray-400">→</span>
+                                <span className="text-purple-300">To: {task.transferTo || 'Unknown'}</span>
+                              </div>
+                              {task.transferRequestedAt && (
+                                <p className="text-gray-400 text-xs mt-1">
+                                  Requested: {new Date(task.transferRequestedAt).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                            <span className={`metric-badge ${
+                              task.transferStatus === 'accepted' ? 'bg-green-600 text-white' :
+                              task.transferStatus === 'denied' ? 'bg-red-600 text-white' :
+                              'bg-yellow-600 text-white'
+                            }`}>
+                              {task.transferStatus === 'accepted' ? '✅ ACCEPTED' :
+                               task.transferStatus === 'denied' ? '❌ DENIED' :
+                               '⏳ PENDING'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-300 text-center py-8">No transfer requests yet</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STATUS TRACKING SECTION */}
+            {activeSection === 'status' && (userPermissions.canViewStatusMetrics || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>🆘 Status Tracking - Availability Trends</h2>
+                </div>
+
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">📊 User Status Summary</h3>
+                  <div className="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-500 border-opacity-30 mb-4">
+                    <p className="text-blue-200 text-sm">
+                      <strong>ℹ️ Note:</strong> This section tracks swamped/busy status changes and trends.
+                      Real-time status data is managed in the Dashboard. Historical tracking coming soon.
+                    </p>
+                  </div>
+                  <p className="text-gray-300 text-center py-8">Status history tracking will be available in the next update.</p>
+                </div>
+              </div>
+            )}
+
+            {/* ESCALATION REPORTS SECTION */}
+            {activeSection === 'escalations' && (userPermissions.canViewEscalations || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>⏰ Escalation Reports & Alerts</h2>
+                </div>
+
+                {/* Escalation Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-orange-500">
+                    <p className="text-orange-200 text-sm mb-1 font-semibold">Escalated Tasks</p>
+                    <p className="text-white text-4xl font-bold">{escalatedTasks.length}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                    <p className="text-red-200 text-sm mb-1 font-semibold">Currently Escalated</p>
+                    <p className="text-white text-4xl font-bold">
+                      {escalatedTasks.filter(t => t.status === 'active').length}
+                    </p>
+                  </div>
+                  <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                    <p className="text-green-200 text-sm mb-1 font-semibold">Resolved</p>
+                    <p className="text-white text-4xl font-bold">
+                      {escalatedTasks.filter(t => t.status === 'completed').length}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Escalation Timeline */}
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">⚠️ Escalation Events</h3>
+                  {escalatedTasks.length > 0 ? (
+                    <div className="space-y-3">
+                      {escalatedTasks.map(task => (
+                        <div key={task.id} className="glass-panel rounded-lg p-4 border-l-4 border-orange-500">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-white font-bold mb-1">{task.name}</h4>
+                              <div className="flex flex-wrap gap-2 items-center text-sm mb-2">
+                                <span className="text-orange-300">Assigned: {task.assignedTo || 'Unassigned'}</span>
+                                {task.escalatedAt && (
+                                  <span className="text-gray-400">
+                                    • Escalated: {new Date(task.escalatedAt).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`metric-badge ${
+                                task.status === 'completed' ? 'bg-green-600 text-white' : 'bg-orange-600 text-white'
+                              }`}>
+                                {task.status === 'completed' ? '✅ RESOLVED' : '⏰ ACTIVE ESCALATION'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-300 text-center py-8">No escalations recorded</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TEAM REPORTS SECTION */}
+            {activeSection === 'team' && (userPermissions.canViewTeamReports || userPermissions.isAdmin || userPermissions.isManager) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>👥 Team Reports - Individual Performance</h2>
+                </div>
+
+                {/* Individual Team Member Performance */}
+                <div className="chart-container">
+                  <h3 className="text-2xl font-bold text-white mb-4">📋 Workload Distribution</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {TEAM_MEMBERS.map(member => {
+                      const memberActiveTasks = activeTasks.filter(t => t.assignedTo === member.name);
+                      const memberCompleted = completedThisMonth.filter(t => t.completedBy === member.name || t.assignedTo === member.name);
+
+                      return (
+                        <div key={member.name} className="glass-panel rounded-lg p-4 hover:bg-opacity-20 transition-all">
+                          <h4 className="text-white font-bold text-lg mb-3">{member.name}</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-300">Active Tasks:</span>
+                              <span className="text-blue-300 font-bold">{memberActiveTasks.length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-300">Completed (30d):</span>
+                              <span className="text-green-300 font-bold">{memberCompleted.length}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PERFORMANCE METRICS SECTION */}
+            {activeSection === 'performance' && (userPermissions.canViewPerformanceMetrics || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>⏱️ Performance Metrics - Task Completion & Response Times</h2>
+                </div>
+
+                {(() => {
+                  // Calculate completion time metrics
+                  const tasksWithCompletionTime = completedTasks.filter(t => t.createdAt && t.completedAt).map(t => {
+                    const created = new Date(t.createdAt);
+                    const completed = new Date(t.completedAt);
+                    const hoursToComplete = (completed - created) / (1000 * 60 * 60);
+                    return { ...t, hoursToComplete };
+                  });
+
+                  const avgCompletionTime = tasksWithCompletionTime.length > 0
+                    ? tasksWithCompletionTime.reduce((sum, t) => sum + t.hoursToComplete, 0) / tasksWithCompletionTime.length
+                    : 0;
+
+                  // Group by priority
+                  const byPriority = {};
+                  tasksWithCompletionTime.forEach(t => {
+                    const priority = t.priority || 'medium';
+                    if (!byPriority[priority]) byPriority[priority] = [];
+                    byPriority[priority].push(t);
+                  });
+
+                  // Group by category
+                  const byCategory = {};
+                  tasksWithCompletionTime.forEach(t => {
+                    const cat = t.category || 'General';
+                    if (!byCategory[cat]) byCategory[cat] = [];
+                    byCategory[cat].push(t);
+                  });
+
+                  // Response time (creation to first action)
+                  const tasksWithResponseTime = tasks.filter(t => t.createdAt && (t.claimedAt || t.workingOnSince)).map(t => {
+                    const created = new Date(t.createdAt);
+                    const firstAction = new Date(t.claimedAt || t.workingOnSince);
+                    const hoursToRespond = (firstAction - created) / (1000 * 60 * 60);
+                    return { ...t, hoursToRespond };
+                  });
+
+                  const avgResponseTime = tasksWithResponseTime.length > 0
+                    ? tasksWithResponseTime.reduce((sum, t) => sum + t.hoursToRespond, 0) / tasksWithResponseTime.length
+                    : 0;
+
+                  return (
+                    <>
+                      {/* Key Performance Metrics */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-blue-500">
+                          <p className="text-blue-200 text-sm mb-1 font-semibold">Avg Completion Time</p>
+                          <p className="text-white text-4xl font-bold">{avgCompletionTime.toFixed(1)}h</p>
+                          <p className="text-blue-300 text-xs mt-1">{tasksWithCompletionTime.length} tasks analyzed</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                          <p className="text-green-200 text-sm mb-1 font-semibold">Avg Response Time</p>
+                          <p className="text-white text-4xl font-bold">{avgResponseTime.toFixed(1)}h</p>
+                          <p className="text-green-300 text-xs mt-1">Time to first action</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-yellow-500">
+                          <p className="text-yellow-200 text-sm mb-1 font-semibold">Fastest Category</p>
+                          <p className="text-white text-2xl font-bold">
+                            {Object.entries(byCategory).length > 0
+                              ? Object.entries(byCategory)
+                                  .map(([cat, tasks]) => ({
+                                    cat,
+                                    avg: tasks.reduce((sum, t) => sum + t.hoursToComplete, 0) / tasks.length
+                                  }))
+                                  .sort((a, b) => a.avg - b.avg)[0]?.cat || 'N/A'
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                          <p className="text-red-200 text-sm mb-1 font-semibold">Slowest Category</p>
+                          <p className="text-white text-2xl font-bold">
+                            {Object.entries(byCategory).length > 0
+                              ? Object.entries(byCategory)
+                                  .map(([cat, tasks]) => ({
+                                    cat,
+                                    avg: tasks.reduce((sum, t) => sum + t.hoursToComplete, 0) / tasks.length
+                                  }))
+                                  .sort((a, b) => b.avg - a.avg)[0]?.cat || 'N/A'
+                              : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Completion Time by Priority */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">⚡ Completion Time by Priority</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {['urgent', 'high', 'medium', 'low'].map(priority => {
+                            const priorityTasks = byPriority[priority] || [];
+                            const avg = priorityTasks.length > 0
+                              ? priorityTasks.reduce((sum, t) => sum + t.hoursToComplete, 0) / priorityTasks.length
+                              : 0;
+
+                            return (
+                              <div key={priority} className="glass-panel rounded-lg p-4">
+                                <p className={`text-sm font-semibold mb-2 ${
+                                  priority === 'urgent' ? 'text-red-400' :
+                                  priority === 'high' ? 'text-orange-400' :
+                                  priority === 'medium' ? 'text-yellow-400' :
+                                  'text-green-400'
+                                }`}>
+                                  {priority.toUpperCase()}
+                                </p>
+                                <p className="text-white text-3xl font-bold">{avg.toFixed(1)}h</p>
+                                <p className="text-gray-400 text-xs mt-1">{priorityTasks.length} tasks</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Category Performance */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">📊 Completion Time by Category</h3>
+                        <div className="space-y-3">
+                          {Object.entries(byCategory)
+                            .map(([cat, tasks]) => ({
+                              category: cat,
+                              avg: tasks.reduce((sum, t) => sum + t.hoursToComplete, 0) / tasks.length,
+                              count: tasks.length
+                            }))
+                            .sort((a, b) => a.avg - b.avg)
+                            .map(({ category, avg, count }) => (
+                              <div key={category} className="glass-panel rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-white font-bold">{category}</p>
+                                    <p className="text-gray-400 text-sm">{count} tasks completed</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-white text-2xl font-bold">{avg.toFixed(1)}h</p>
+                                    <p className="text-gray-400 text-xs">average</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* POOL ANALYTICS SECTION */}
+            {activeSection === 'pool' && (userPermissions.canViewPoolAnalytics || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>🏊 Pool Analytics - Pool Performance & Efficiency</h2>
+                </div>
+
+                {(() => {
+                  const poolTasks = tasks.filter(t => t.isPoolRequest || t.category?.toLowerCase().includes('pool'));
+                  const claimedPoolTasks = poolTasks.filter(t => t.claimedAt);
+                  const unclaimedPoolTasks = poolTasks.filter(t => !t.claimedAt && t.status === 'active');
+
+                  // Calculate time in pool before claimed
+                  const poolTasksWithWaitTime = claimedPoolTasks.filter(t => t.createdAt && t.claimedAt).map(t => {
+                    const created = new Date(t.createdAt);
+                    const claimed = new Date(t.claimedAt);
+                    const hoursInPool = (claimed - created) / (1000 * 60 * 60);
+                    return { ...t, hoursInPool };
+                  });
+
+                  const avgPoolWaitTime = poolTasksWithWaitTime.length > 0
+                    ? poolTasksWithWaitTime.reduce((sum, t) => sum + t.hoursInPool, 0) / poolTasksWithWaitTime.length
+                    : 0;
+
+                  const claimRate = poolTasks.length > 0
+                    ? (claimedPoolTasks.length / poolTasks.length) * 100
+                    : 0;
+
+                  // Top claimers
+                  const claimerCounts = {};
+                  claimedPoolTasks.forEach(t => {
+                    const claimer = t.assignedTo || t.workingOnBy || 'Unknown';
+                    claimerCounts[claimer] = (claimerCounts[claimer] || 0) + 1;
+                  });
+
+                  // Tasks returned to pool
+                  const returnedToPool = tasks.filter(t => t.transferStatus === 'denied' || t.releasedToPool);
+
+                  return (
+                    <>
+                      {/* Pool Stats */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-cyan-500">
+                          <p className="text-cyan-200 text-sm mb-1 font-semibold">Total Pool Tasks</p>
+                          <p className="text-white text-4xl font-bold">{poolTasks.length}</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                          <p className="text-green-200 text-sm mb-1 font-semibold">Claim Rate</p>
+                          <p className="text-white text-4xl font-bold">{claimRate.toFixed(0)}%</p>
+                          <p className="text-green-300 text-xs mt-1">{claimedPoolTasks.length} claimed</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-yellow-500">
+                          <p className="text-yellow-200 text-sm mb-1 font-semibold">Avg Wait Time</p>
+                          <p className="text-white text-4xl font-bold">{avgPoolWaitTime.toFixed(1)}h</p>
+                          <p className="text-yellow-300 text-xs mt-1">Until claimed</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                          <p className="text-red-200 text-sm mb-1 font-semibold">Unclaimed</p>
+                          <p className="text-white text-4xl font-bold">{unclaimedPoolTasks.length}</p>
+                        </div>
+                      </div>
+
+                      {/* Top Pool Claimers */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">🏆 Top Pool Claimers</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.entries(claimerCounts)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 12)
+                            .map(([claimer, count]) => (
+                              <div key={claimer} className="glass-panel rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-white font-bold">{claimer}</p>
+                                  <span className="px-3 py-1 bg-cyan-600 text-white rounded-full text-sm font-bold">
+                                    {count}
+                                  </span>
+                                </div>
+                                <p className="text-gray-400 text-sm mt-1">Pool tasks claimed</p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Pool Abandonment */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">🔄 Pool Returns & Abandonment</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="glass-panel rounded-lg p-6">
+                            <p className="text-orange-200 text-sm mb-2 font-semibold">Returned to Pool</p>
+                            <p className="text-white text-4xl font-bold">{returnedToPool.length}</p>
+                            <p className="text-gray-400 text-sm mt-2">Tasks released back to pool due to denial or inactivity</p>
+                          </div>
+                          <div className="glass-panel rounded-lg p-6">
+                            <p className="text-blue-200 text-sm mb-2 font-semibold">Return Rate</p>
+                            <p className="text-white text-4xl font-bold">
+                              {poolTasks.length > 0 ? ((returnedToPool.length / poolTasks.length) * 100).toFixed(1) : 0}%
+                            </p>
+                            <p className="text-gray-400 text-sm mt-2">Percentage of pool tasks returned</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* SKILL & PRIORITY SECTION */}
+            {activeSection === 'skillpriority' && (userPermissions.canViewSkillPriority || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>🎯 Skills & Priority - Matching Effectiveness & Priority Compliance</h2>
+                </div>
+
+                {(() => {
+                  // Skill matching effectiveness
+                  const tasksWithSkillData = tasks.filter(t => t.skillMatchedUsers || t.skillMismatchReason);
+                  const skillMatched = tasksWithSkillData.filter(t => t.skillMatchedUsers && t.skillMatchedUsers.length > 0);
+                  const skillMismatch = tasksWithSkillData.filter(t => t.skillMismatchReason);
+
+                  const skillMatchRate = tasksWithSkillData.length > 0
+                    ? (skillMatched.length / tasksWithSkillData.length) * 100
+                    : 0;
+
+                  // Priority distribution
+                  const priorityCounts = { urgent: 0, high: 0, medium: 0, low: 0 };
+                  tasks.forEach(t => {
+                    const priority = t.priority || 'low';
+                    if (priorityCounts.hasOwnProperty(priority)) {
+                      priorityCounts[priority]++;
+                    }
+                  });
+
+                  const lowPriorityCompliance = tasks.length > 0
+                    ? (priorityCounts.low / tasks.length) * 100
+                    : 0;
+
+                  // Tasks that escalated in priority
+                  const escalatedPriority = tasks.filter(t => t.priorityHistory && t.priorityHistory.length > 1);
+
+                  return (
+                    <>
+                      {/* Skill & Priority Stats */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-green-500">
+                          <p className="text-green-200 text-sm mb-1 font-semibold">Skill Match Rate</p>
+                          <p className="text-white text-4xl font-bold">{skillMatchRate.toFixed(0)}%</p>
+                          <p className="text-green-300 text-xs mt-1">{skillMatched.length} successful matches</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                          <p className="text-red-200 text-sm mb-1 font-semibold">Skill Mismatches</p>
+                          <p className="text-white text-4xl font-bold">{skillMismatch.length}</p>
+                          <p className="text-red-300 text-xs mt-1">Sent to general pool</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-blue-500">
+                          <p className="text-blue-200 text-sm mb-1 font-semibold">Low Priority Default</p>
+                          <p className="text-white text-4xl font-bold">{lowPriorityCompliance.toFixed(0)}%</p>
+                          <p className="text-blue-300 text-xs mt-1">Compliance rate</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-orange-500">
+                          <p className="text-orange-200 text-sm mb-1 font-semibold">Priority Escalations</p>
+                          <p className="text-white text-4xl font-bold">{escalatedPriority.length}</p>
+                          <p className="text-orange-300 text-xs mt-1">Tasks escalated</p>
+                        </div>
+                      </div>
+
+                      {/* Priority Distribution */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">📊 Priority Distribution</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          {Object.entries(priorityCounts).map(([priority, count]) => {
+                            const percentage = tasks.length > 0 ? (count / tasks.length) * 100 : 0;
+                            return (
+                              <div key={priority} className="glass-panel rounded-lg p-6">
+                                <p className={`text-sm font-semibold mb-2 ${
+                                  priority === 'urgent' ? 'text-red-400' :
+                                  priority === 'high' ? 'text-orange-400' :
+                                  priority === 'medium' ? 'text-yellow-400' :
+                                  'text-green-400'
+                                }`}>
+                                  {priority.toUpperCase()}
+                                </p>
+                                <p className="text-white text-4xl font-bold">{count}</p>
+                                <p className="text-gray-400 text-sm mt-1">{percentage.toFixed(1)}% of total</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Skill Mismatch Reasons */}
+                      {skillMismatch.length > 0 && (
+                        <div className="chart-container">
+                          <h3 className="text-2xl font-bold text-white mb-4">⚠️ Skill Mismatch Analysis</h3>
+                          <div className="space-y-3">
+                            {skillMismatch.slice(0, 10).map((task, idx) => (
+                              <div key={idx} className="glass-panel rounded-lg p-4">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1">
+                                    <p className="text-white font-bold">{task.name}</p>
+                                    <p className="text-orange-300 text-sm mt-1">
+                                      Reason: {task.skillMismatchReason}
+                                    </p>
+                                    {task.category && (
+                                      <span className="inline-block mt-2 px-2 py-1 bg-purple-600 text-white rounded text-xs">
+                                        {task.category}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* TRENDS & PATTERNS SECTION */}
+            {activeSection === 'trends' && (userPermissions.canViewTrends || userPermissions.isAdmin) && (
+              <div className="space-y-6">
+                <div className="section-header">
+                  <h2>📈 Trends & Patterns - Overdue, Help Requests & Assignment Patterns</h2>
+                </div>
+
+                {(() => {
+                  // Overdue tasks
+                  const overdueTasks = tasks.filter(t => {
+                    if (t.status !== 'active' || !t.endDate) return false;
+                    return new Date(t.endDate) < new Date();
+                  });
+
+                  // Group overdue by user
+                  const overdueByUser = {};
+                  overdueTasks.forEach(t => {
+                    const user = t.assignedTo || 'Unassigned';
+                    if (!overdueByUser[user]) overdueByUser[user] = [];
+                    overdueByUser[user].push(t);
+                  });
+
+                  // Help system metrics
+                  const helpOffered = tasks.filter(t => t.needsHelp || t.helpOfferedBy);
+                  const helpAccepted = tasks.filter(t => t.helpAcceptedBy);
+                  const helpSuccessRate = helpOffered.length > 0
+                    ? (helpAccepted.length / helpOffered.length) * 100
+                    : 0;
+
+                  // Assignment patterns
+                  const assignmentsByUser = {};
+                  tasks.forEach(t => {
+                    if (t.assignedBy) {
+                      assignmentsByUser[t.assignedBy] = (assignmentsByUser[t.assignedBy] || 0) + 1;
+                    }
+                  });
+
+                  const receiptsByUser = {};
+                  tasks.forEach(t => {
+                    if (t.assignedTo) {
+                      receiptsByUser[t.assignedTo] = (receiptsByUser[t.assignedTo] || 0) + 1;
+                    }
+                  });
+
+                  // Direct vs pool
+                  const directAssignments = tasks.filter(t => t.assignedTo && !t.isPoolRequest);
+                  const poolAssignments = tasks.filter(t => t.isPoolRequest);
+
+                  return (
+                    <>
+                      {/* Trends Overview */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-red-500">
+                          <p className="text-red-200 text-sm mb-1 font-semibold">Overdue Tasks</p>
+                          <p className="text-white text-4xl font-bold">{overdueTasks.length}</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-yellow-500">
+                          <p className="text-yellow-200 text-sm mb-1 font-semibold">Help Requests</p>
+                          <p className="text-white text-4xl font-bold">{helpOffered.length}</p>
+                          <p className="text-yellow-300 text-xs mt-1">{helpSuccessRate.toFixed(0)}% accepted</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-blue-500">
+                          <p className="text-blue-200 text-sm mb-1 font-semibold">Direct Assignments</p>
+                          <p className="text-white text-4xl font-bold">{directAssignments.length}</p>
+                        </div>
+                        <div className="stat-card rounded-xl p-6 border-l-4 border-cyan-500">
+                          <p className="text-cyan-200 text-sm mb-1 font-semibold">Pool Assignments</p>
+                          <p className="text-white text-4xl font-bold">{poolAssignments.length}</p>
+                        </div>
+                      </div>
+
+                      {/* Overdue by User */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">⚠️ Overdue Tasks by User</h3>
+                        {Object.keys(overdueByUser).length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Object.entries(overdueByUser)
+                              .sort((a, b) => b[1].length - a[1].length)
+                              .map(([user, tasks]) => (
+                                <div key={user} className="glass-panel rounded-lg p-4 border-l-4 border-red-500">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-white font-bold">{user}</p>
+                                    <span className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-bold">
+                                      {tasks.length}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-400 text-sm mt-1">Overdue tasks</p>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-300 text-center py-8">🎉 No overdue tasks!</p>
+                        )}
+                      </div>
+
+                      {/* Top Task Creators */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">👨‍💼 Top Task Creators</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.entries(assignmentsByUser)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 12)
+                            .map(([user, count]) => (
+                              <div key={user} className="glass-panel rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-white font-bold">{user}</p>
+                                  <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-bold">
+                                    {count}
+                                  </span>
+                                </div>
+                                <p className="text-gray-400 text-sm mt-1">Tasks assigned</p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Top Task Recipients */}
+                      <div className="chart-container">
+                        <h3 className="text-2xl font-bold text-white mb-4">📥 Top Task Recipients</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.entries(receiptsByUser)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 12)
+                            .map(([user, count]) => (
+                              <div key={user} className="glass-panel rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-white font-bold">{user}</p>
+                                  <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-bold">
+                                    {count}
+                                  </span>
+                                </div>
+                                <p className="text-gray-400 text-sm mt-1">Tasks received</p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
