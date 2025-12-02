@@ -1076,11 +1076,11 @@ REACTION_ASSIGNMENTS = {
 
 @bot.tree.command(
     name="exportimages",
-    description="Export image links from a channel within a date range and DM them to you.",
+    description="Export image attachment links from a channel within a date range and DM them to you (NDJSON).",
 )
 @app_commands.describe(
     channel="Channel to scan (default: the channel where you run this).",
-    mode="Timeframe: last 30 days, last 90 days, or custom range.",
+    mode="Timeframe preset or custom range.",
     start="For custom mode: start date (YYYY-MM-DD).",
     end="For custom mode: end date (YYYY-MM-DD, optional).",
     max_messages="Max messages to scan (default 5000).",
@@ -1100,9 +1100,8 @@ async def exportimages(
     end: Optional[str] = None,
     max_messages: int = 5000,
 ):
-    """Slash command handler for exporting image URLs from a channel."""
+    """Export image attachment metadata as NDJSON via DM."""
 
-    # Restrict to admins for safety
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message(
             "❌ You need administrator permissions to use this command.",
@@ -1110,12 +1109,7 @@ async def exportimages(
         )
         return
 
-    # Use the channel the command was run in if none provided
-    target_channel = channel or interaction.channel
-
-    # Default mode: last 30 days
     mode_value = mode.value if mode is not None else "last_30"
-
     now = datetime.utcnow()
     after_dt: Optional[datetime] = None
     before_dt: Optional[datetime] = None
@@ -1127,7 +1121,7 @@ async def exportimages(
     elif mode_value == "last_90":
         after_dt = now - timedelta(days=90)
         range_text = f"from {after_dt.date()} to now (last 90 days)"
-    else:  # custom
+    else:
         if not start:
             await interaction.response.send_message(
                 "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
@@ -1141,7 +1135,6 @@ async def exportimages(
                 ephemeral=True,
             )
             return
-
         if end:
             before_dt = parse_date_str(end)
             if before_dt is None:
@@ -1154,49 +1147,50 @@ async def exportimages(
         else:
             range_text = f"from {after_dt.date()} onward"
 
-    # Defer reply so we can work; keep it ephemeral
     await interaction.response.defer(ephemeral=True)
 
+    target_channel = channel or interaction.channel
+    total_scanned = 0
+    image_count = 0
     lines: list[str] = []
-    lines.append(
-        f"Channel: #{target_channel.name} (id: {target_channel.id}) "
-        f"in {target_channel.guild.name}"
-    )
-    lines.append(f"Date filter: {range_text}")
-    lines.append(f"Max messages scanned: {max_messages}")
-    lines.append("")
 
-    count_images = 0
-    scanned = 0
-
-    # Scan messages (Discord paginates behind the scenes)
     async for msg in target_channel.history(
         limit=max_messages,
         oldest_first=True,
         after=after_dt,
         before=before_dt,
     ):
-        scanned += 1
+        total_scanned += 1
         for attachment in msg.attachments:
-            # Only images
-            if attachment.content_type and attachment.content_type.startswith("image"):
-                count_images += 1
-                lines.append(
-                    f"- {attachment.url} "
-                    f"(by {msg.author.display_name}, msg id {msg.id}, at {msg.created_at.isoformat()})"
-                )
+            content_type = attachment.content_type or ""
+            if not content_type.startswith("image"):
+                continue
+            image_count += 1
+            record = {
+                "url": attachment.url,
+                "filename": attachment.filename,
+                "content_type": content_type or None,
+                "size": attachment.size,
+                "kind": "image",
+                "author": msg.author.display_name,
+                "message_id": msg.id,
+                "timestamp": msg.created_at.isoformat(),
+                "channel_id": msg.channel.id,
+                "channel_name": msg.channel.name,
+                "guild_id": msg.guild.id if msg.guild else None,
+                "guild_name": msg.guild.name if msg.guild else None,
+            }
+            lines.append(json.dumps(record, ensure_ascii=False))
 
-    if count_images == 0:
+    if image_count == 0:
         await interaction.followup.send(
-            f"ℹ️ I didn't find any image attachments in "
-            f"{target_channel.mention} ({range_text}, scanned {scanned} messages).",
+            f"ℹ️ I didn't find any **image** attachments in {target_channel.mention} "
+            f"({range_text}, scanned {total_scanned} messages).",
             ephemeral=True,
         )
         return
 
     full_report = "\n".join(lines)
-
-    # Chunk for DM
     chunks = []
     remaining = full_report
     while remaining:
@@ -1212,9 +1206,148 @@ async def exportimages(
         await interaction.user.send(f"```{chunk}```")
 
     await interaction.followup.send(
-        f"✅ Found {count_images} image attachment(s) in "
-        f"{target_channel.mention} ({range_text}, scanned {scanned} messages). "
-        f"I’ve DM’d you the links.",
+        f"✅ Found {image_count} **image** attachment(s) in "
+        f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
+        f"I’ve DM’d you the NDJSON export.",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="exportfiles",
+    description="Export non-image file attachment links from a channel within a date range and DM them to you (NDJSON).",
+)
+@app_commands.describe(
+    channel="Channel to scan (default: the channel where you run this).",
+    mode="Timeframe preset or custom range.",
+    start="For custom mode: start date (YYYY-MM-DD).",
+    end="For custom mode: end date (YYYY-MM-DD, optional).",
+    max_messages="Max messages to scan (default 5000).",
+)
+@app_commands.choices(
+    mode=[
+        app_commands.Choice(name="Last 30 days", value="last_30"),
+        app_commands.Choice(name="Last 90 days", value="last_90"),
+        app_commands.Choice(name="Custom range", value="custom"),
+    ]
+)
+async def exportfiles(
+    interaction: discord.Interaction,
+    channel: Optional[discord.TextChannel] = None,
+    mode: app_commands.Choice[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    max_messages: int = 5000,
+):
+    """Export non-image file attachment metadata as NDJSON via DM."""
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "❌ You need administrator permissions to use this command.",
+            ephemeral=True,
+        )
+        return
+
+    mode_value = mode.value if mode is not None else "last_30"
+    now = datetime.utcnow()
+    after_dt: Optional[datetime] = None
+    before_dt: Optional[datetime] = None
+    range_text = ""
+
+    if mode_value == "last_30":
+        after_dt = now - timedelta(days=30)
+        range_text = f"from {after_dt.date()} to now (last 30 days)"
+    elif mode_value == "last_90":
+        after_dt = now - timedelta(days=90)
+        range_text = f"from {after_dt.date()} to now (last 90 days)"
+    else:
+        if not start:
+            await interaction.response.send_message(
+                "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
+                ephemeral=True,
+            )
+            return
+        after_dt = parse_date_str(start)
+        if after_dt is None:
+            await interaction.response.send_message(
+                "⚠️ Could not parse start date. Use format YYYY-MM-DD.",
+                ephemeral=True,
+            )
+            return
+        if end:
+            before_dt = parse_date_str(end)
+            if before_dt is None:
+                await interaction.response.send_message(
+                    "⚠️ Could not parse end date. Use format YYYY-MM-DD.",
+                    ephemeral=True,
+                )
+                return
+            range_text = f"from {after_dt.date()} to {before_dt.date()}"
+        else:
+            range_text = f"from {after_dt.date()} onward"
+
+    await interaction.response.defer(ephemeral=True)
+
+    target_channel = channel or interaction.channel
+    total_scanned = 0
+    file_count = 0
+    lines: list[str] = []
+
+    async for msg in target_channel.history(
+        limit=max_messages,
+        oldest_first=True,
+        after=after_dt,
+        before=before_dt,
+    ):
+        total_scanned += 1
+        for attachment in msg.attachments:
+            content_type = attachment.content_type or ""
+            if content_type.startswith("image"):
+                continue
+            file_count += 1
+            record = {
+                "url": attachment.url,
+                "filename": attachment.filename,
+                "content_type": content_type or None,
+                "size": attachment.size,
+                "kind": "file",
+                "author": msg.author.display_name,
+                "message_id": msg.id,
+                "timestamp": msg.created_at.isoformat(),
+                "channel_id": msg.channel.id,
+                "channel_name": msg.channel.name,
+                "guild_id": msg.guild.id if msg.guild else None,
+                "guild_name": msg.guild.name if msg.guild else None,
+            }
+            lines.append(json.dumps(record, ensure_ascii=False))
+
+    if file_count == 0:
+        await interaction.followup.send(
+            f"ℹ️ I didn't find any **file** attachments (non-images) in {target_channel.mention} "
+            f"({range_text}, scanned {total_scanned} messages).",
+            ephemeral=True,
+        )
+        return
+
+    full_report = "\n".join(lines)
+    chunks = []
+    remaining = full_report
+    while remaining:
+        chunk = remaining[:1900]
+        last_nl = chunk.rfind("\n")
+        if last_nl != -1:
+            chunk, remaining = remaining[:last_nl], remaining[last_nl + 1 :]
+        else:
+            remaining = remaining[1900:]
+        chunks.append(chunk)
+
+    for chunk in chunks:
+        await interaction.user.send(f"```{chunk}```")
+
+    await interaction.followup.send(
+        f"✅ Found {file_count} **file** attachment(s) (non-images) in "
+        f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
+        f"I’ve DM’d you the NDJSON export.",
         ephemeral=True,
     )
 
