@@ -2624,17 +2624,8 @@ async def on_ready():
         print(f"❌ Error syncing slash commands: {e}")
 
 
-@bot.command(name="setup_panel")
-@commands.has_permissions(administrator=True)
-async def setup_panel(ctx: commands.Context):
-    """Post and pin the request panel in an employee log channel."""
-
-    employee_key = get_employee_by_log_channel(ctx.channel.id)
-    if not employee_key:
-        await ctx.send("This channel is not mapped to an employee log. Update the config first.")
-        return
-
-    embed = discord.Embed(
+def build_request_panel_embed() -> discord.Embed:
+    return discord.Embed(
         title="Request & Reports",
         description=(
             "Use the buttons and dropdowns below to submit requests, reports, or escalations. "
@@ -2643,13 +2634,53 @@ async def setup_panel(ctx: commands.Context):
         color=discord.Color.blurple(),
     )
 
-    message = await ctx.send(embed=embed, view=RequestPanelView())
+
+@bot.command(name="setup_panel")
+@commands.has_permissions(administrator=True)
+async def setup_panel(ctx: commands.Context, employee_key: Optional[str] = None):
+    """Post and pin the request panel in an employee log channel."""
+
+    target_employee_key = None
+    target_channel = None
+
+    if employee_key:
+        candidate_key = employee_key.lower()
+        employee_info = CONFIG.get("employees", {}).get(candidate_key)
+        log_channel_id = employee_info.get("log_channel_id") if employee_info else None
+        if not employee_info or not log_channel_id:
+            await ctx.send(
+                "Unknown employee key or missing log channel in config. "
+                "Double-check CONFIG['employees'].")
+            return
+
+        channel_obj = bot.get_channel(int(log_channel_id))
+        if not channel_obj:
+            await ctx.send("I couldn't find that employee log channel. Is the ID correct?")
+            return
+
+        target_employee_key = candidate_key
+        target_channel = channel_obj
+    else:
+        target_employee_key = get_employee_by_log_channel(ctx.channel.id)
+        target_channel = ctx.channel if target_employee_key else None
+
+    if not target_employee_key or not target_channel:
+        await ctx.send(
+            "Provide an employee key or run this in a mapped log channel.\n"
+            "Usage: `@setup_panel <employee_key>`"
+        )
+        return
+
+    message = await target_channel.send(embed=build_request_panel_embed(), view=RequestPanelView())
     try:
         await message.pin()
     except discord.Forbidden:
         await ctx.send("Panel posted but I could not pin it. Please pin manually.")
     else:
-        await ctx.send("Panel posted and pinned.", delete_after=10)
+        await ctx.send(
+            f"Panel posted and pinned in {target_channel.mention} for {target_employee_key.title()}.",
+            delete_after=10,
+        )
 
 @bot.event
 async def on_message(message):
