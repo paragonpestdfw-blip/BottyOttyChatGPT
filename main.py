@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 import re
 import asyncio
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from threading import Thread
@@ -28,6 +28,111 @@ CORS(app)  # Enable CORS for all routes
 
 # Get port from environment variable (Railway sets this automatically)
 PORT = int(os.environ.get('PORT', 8080))
+
+# Centralized configuration for employees and logging channels
+CONFIG: Dict[str, Any] = {
+    "employees": {
+        # Example structure. Replace IDs with real values in deployment.
+        "caleb": {
+            "discord_user_id": None,
+            "rt_channel_id": None,
+            "log_channel_id": None,
+            "campfire_channel_id": None,
+        },
+        "dakota": {
+            "discord_user_id": None,
+            "rt_channel_id": None,
+            "log_channel_id": None,
+            "campfire_channel_id": None,
+        },
+    },
+    "global_logs": {
+        "call_outs": None,
+        "requests": None,
+        "hours_updates": None,
+        "pending_appointments": None,
+        "tech_collections": None,
+        "vehicle_issues": None,
+        "wpi_reports": None,
+    },
+}
+
+
+def get_employee_by_log_channel(channel_id: int) -> Optional[str]:
+    for key, data in CONFIG.get("employees", {}).items():
+        if data.get("log_channel_id") == channel_id:
+            return key
+    return None
+
+
+def get_employee_by_rt_channel(channel_id: int) -> Optional[str]:
+    for key, data in CONFIG.get("employees", {}).items():
+        if data.get("rt_channel_id") == channel_id:
+            return key
+    return None
+
+
+def get_employee_by_user_id(user_id: int) -> Optional[str]:
+    for key, data in CONFIG.get("employees", {}).items():
+        if data.get("discord_user_id") == user_id:
+            return key
+    return None
+
+
+async def log_event(
+    bot: commands.Bot,
+    employee_key: str,
+    event_type: str,
+    title: str,
+    fields: Dict[str, str],
+    global_log_key: str,
+):
+    """Send a structured embed to the global log channel and a marker to the employee log channel."""
+
+    employee_info = CONFIG.get("employees", {}).get(employee_key)
+    if not employee_info:
+        return
+
+    global_channel_id = CONFIG.get("global_logs", {}).get(global_log_key)
+    log_channel_id = employee_info.get("log_channel_id")
+    user_id = employee_info.get("discord_user_id")
+
+    employee_mention = f"<@{user_id}>" if user_id else employee_key.title()
+    log_channel_ref = f"<#{log_channel_id}>" if log_channel_id else "Employee Log"
+
+    # Global embed
+    if global_channel_id:
+        channel = bot.get_channel(int(global_channel_id))
+        if channel:
+            embed = discord.Embed(title=title, color=discord.Color.blue())
+            embed.add_field(name="Employee", value=employee_mention, inline=True)
+            embed.add_field(name="Type", value=event_type, inline=True)
+            embed.add_field(name="Employee Log", value=log_channel_ref, inline=True)
+            for field_name, value in fields.items():
+                embed.add_field(name=field_name, value=value or "N/A", inline=False)
+            embed.add_field(name="Status", value="Pending", inline=True)
+            embed.timestamp = discord.utils.utcnow()
+            await channel.send(embed=embed)
+
+    # Employee marker
+    if log_channel_id:
+        marker_channel = bot.get_channel(int(log_channel_id))
+        if marker_channel:
+            marker_parts = [f"📌 {title}"]
+            detail_parts = [f"{k}: {v}" for k, v in fields.items() if v]
+            if detail_parts:
+                marker_parts.append(" — ".join(detail_parts))
+            marker_parts.append("Status: Pending")
+            await marker_channel.send(" | ".join(marker_parts))
+
+
+def detect_hey_event(content: str) -> Optional[str]:
+    lowered = content.lower()
+    if any(keyword in lowered for keyword in ["sick", "ill", "fever", "can't come", "call out", "calling out"]):
+        return "call_out"
+    if any(keyword in lowered for keyword in ["vehicle", "unsafe", "flat tire", "engine", "brake", "car accident"]):
+        return "vehicle_issue"
+    return None
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
@@ -971,11 +1076,11 @@ REACTION_ASSIGNMENTS = {
 
 @bot.tree.command(
     name="exportimages",
-    description="Export image links from a channel within a date range and DM them to you.",
+    description="Export image attachment links from a channel within a date range and DM them to you (NDJSON).",
 )
 @app_commands.describe(
     channel="Channel to scan (default: the channel where you run this).",
-    mode="Timeframe: last 30 days, last 90 days, or custom range.",
+    mode="Timeframe preset or custom range.",
     start="For custom mode: start date (YYYY-MM-DD).",
     end="For custom mode: end date (YYYY-MM-DD, optional).",
     max_messages="Max messages to scan (default 5000).",
@@ -995,9 +1100,8 @@ async def exportimages(
     end: Optional[str] = None,
     max_messages: int = 5000,
 ):
-    """Slash command handler for exporting image URLs from a channel."""
+    """Export image attachment metadata as NDJSON via DM."""
 
-    # Restrict to admins for safety
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message(
             "❌ You need administrator permissions to use this command.",
@@ -1005,12 +1109,7 @@ async def exportimages(
         )
         return
 
-    # Use the channel the command was run in if none provided
-    target_channel = channel or interaction.channel
-
-    # Default mode: last 30 days
     mode_value = mode.value if mode is not None else "last_30"
-
     now = datetime.utcnow()
     after_dt: Optional[datetime] = None
     before_dt: Optional[datetime] = None
@@ -1022,7 +1121,7 @@ async def exportimages(
     elif mode_value == "last_90":
         after_dt = now - timedelta(days=90)
         range_text = f"from {after_dt.date()} to now (last 90 days)"
-    else:  # custom
+    else:
         if not start:
             await interaction.response.send_message(
                 "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
@@ -1036,7 +1135,6 @@ async def exportimages(
                 ephemeral=True,
             )
             return
-
         if end:
             before_dt = parse_date_str(end)
             if before_dt is None:
@@ -1049,49 +1147,50 @@ async def exportimages(
         else:
             range_text = f"from {after_dt.date()} onward"
 
-    # Defer reply so we can work; keep it ephemeral
     await interaction.response.defer(ephemeral=True)
 
+    target_channel = channel or interaction.channel
+    total_scanned = 0
+    image_count = 0
     lines: list[str] = []
-    lines.append(
-        f"Channel: #{target_channel.name} (id: {target_channel.id}) "
-        f"in {target_channel.guild.name}"
-    )
-    lines.append(f"Date filter: {range_text}")
-    lines.append(f"Max messages scanned: {max_messages}")
-    lines.append("")
 
-    count_images = 0
-    scanned = 0
-
-    # Scan messages (Discord paginates behind the scenes)
     async for msg in target_channel.history(
         limit=max_messages,
         oldest_first=True,
         after=after_dt,
         before=before_dt,
     ):
-        scanned += 1
+        total_scanned += 1
         for attachment in msg.attachments:
-            # Only images
-            if attachment.content_type and attachment.content_type.startswith("image"):
-                count_images += 1
-                lines.append(
-                    f"- {attachment.url} "
-                    f"(by {msg.author.display_name}, msg id {msg.id}, at {msg.created_at.isoformat()})"
-                )
+            content_type = attachment.content_type or ""
+            if not content_type.startswith("image"):
+                continue
+            image_count += 1
+            record = {
+                "url": attachment.url,
+                "filename": attachment.filename,
+                "content_type": content_type or None,
+                "size": attachment.size,
+                "kind": "image",
+                "author": msg.author.display_name,
+                "message_id": msg.id,
+                "timestamp": msg.created_at.isoformat(),
+                "channel_id": msg.channel.id,
+                "channel_name": msg.channel.name,
+                "guild_id": msg.guild.id if msg.guild else None,
+                "guild_name": msg.guild.name if msg.guild else None,
+            }
+            lines.append(json.dumps(record, ensure_ascii=False))
 
-    if count_images == 0:
+    if image_count == 0:
         await interaction.followup.send(
-            f"ℹ️ I didn't find any image attachments in "
-            f"{target_channel.mention} ({range_text}, scanned {scanned} messages).",
+            f"ℹ️ I didn't find any **image** attachments in {target_channel.mention} "
+            f"({range_text}, scanned {total_scanned} messages).",
             ephemeral=True,
         )
         return
 
     full_report = "\n".join(lines)
-
-    # Chunk for DM
     chunks = []
     remaining = full_report
     while remaining:
@@ -1107,9 +1206,148 @@ async def exportimages(
         await interaction.user.send(f"```{chunk}```")
 
     await interaction.followup.send(
-        f"✅ Found {count_images} image attachment(s) in "
-        f"{target_channel.mention} ({range_text}, scanned {scanned} messages). "
-        f"I’ve DM’d you the links.",
+        f"✅ Found {image_count} **image** attachment(s) in "
+        f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
+        f"I’ve DM’d you the NDJSON export.",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="exportfiles",
+    description="Export non-image file attachment links from a channel within a date range and DM them to you (NDJSON).",
+)
+@app_commands.describe(
+    channel="Channel to scan (default: the channel where you run this).",
+    mode="Timeframe preset or custom range.",
+    start="For custom mode: start date (YYYY-MM-DD).",
+    end="For custom mode: end date (YYYY-MM-DD, optional).",
+    max_messages="Max messages to scan (default 5000).",
+)
+@app_commands.choices(
+    mode=[
+        app_commands.Choice(name="Last 30 days", value="last_30"),
+        app_commands.Choice(name="Last 90 days", value="last_90"),
+        app_commands.Choice(name="Custom range", value="custom"),
+    ]
+)
+async def exportfiles(
+    interaction: discord.Interaction,
+    channel: Optional[discord.TextChannel] = None,
+    mode: app_commands.Choice[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    max_messages: int = 5000,
+):
+    """Export non-image file attachment metadata as NDJSON via DM."""
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "❌ You need administrator permissions to use this command.",
+            ephemeral=True,
+        )
+        return
+
+    mode_value = mode.value if mode is not None else "last_30"
+    now = datetime.utcnow()
+    after_dt: Optional[datetime] = None
+    before_dt: Optional[datetime] = None
+    range_text = ""
+
+    if mode_value == "last_30":
+        after_dt = now - timedelta(days=30)
+        range_text = f"from {after_dt.date()} to now (last 30 days)"
+    elif mode_value == "last_90":
+        after_dt = now - timedelta(days=90)
+        range_text = f"from {after_dt.date()} to now (last 90 days)"
+    else:
+        if not start:
+            await interaction.response.send_message(
+                "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
+                ephemeral=True,
+            )
+            return
+        after_dt = parse_date_str(start)
+        if after_dt is None:
+            await interaction.response.send_message(
+                "⚠️ Could not parse start date. Use format YYYY-MM-DD.",
+                ephemeral=True,
+            )
+            return
+        if end:
+            before_dt = parse_date_str(end)
+            if before_dt is None:
+                await interaction.response.send_message(
+                    "⚠️ Could not parse end date. Use format YYYY-MM-DD.",
+                    ephemeral=True,
+                )
+                return
+            range_text = f"from {after_dt.date()} to {before_dt.date()}"
+        else:
+            range_text = f"from {after_dt.date()} onward"
+
+    await interaction.response.defer(ephemeral=True)
+
+    target_channel = channel or interaction.channel
+    total_scanned = 0
+    file_count = 0
+    lines: list[str] = []
+
+    async for msg in target_channel.history(
+        limit=max_messages,
+        oldest_first=True,
+        after=after_dt,
+        before=before_dt,
+    ):
+        total_scanned += 1
+        for attachment in msg.attachments:
+            content_type = attachment.content_type or ""
+            if content_type.startswith("image"):
+                continue
+            file_count += 1
+            record = {
+                "url": attachment.url,
+                "filename": attachment.filename,
+                "content_type": content_type or None,
+                "size": attachment.size,
+                "kind": "file",
+                "author": msg.author.display_name,
+                "message_id": msg.id,
+                "timestamp": msg.created_at.isoformat(),
+                "channel_id": msg.channel.id,
+                "channel_name": msg.channel.name,
+                "guild_id": msg.guild.id if msg.guild else None,
+                "guild_name": msg.guild.name if msg.guild else None,
+            }
+            lines.append(json.dumps(record, ensure_ascii=False))
+
+    if file_count == 0:
+        await interaction.followup.send(
+            f"ℹ️ I didn't find any **file** attachments (non-images) in {target_channel.mention} "
+            f"({range_text}, scanned {total_scanned} messages).",
+            ephemeral=True,
+        )
+        return
+
+    full_report = "\n".join(lines)
+    chunks = []
+    remaining = full_report
+    while remaining:
+        chunk = remaining[:1900]
+        last_nl = chunk.rfind("\n")
+        if last_nl != -1:
+            chunk, remaining = remaining[:last_nl], remaining[last_nl + 1 :]
+        else:
+            remaining = remaining[1900:]
+        chunks.append(chunk)
+
+    for chunk in chunks:
+        await interaction.user.send(f"```{chunk}```")
+
+    await interaction.followup.send(
+        f"✅ Found {file_count} **file** attachment(s) (non-images) in "
+        f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
+        f"I’ve DM’d you the NDJSON export.",
         ephemeral=True,
     )
 
@@ -1577,6 +1815,428 @@ class OtherRequestModal(ui.Modal, title="Other Request"):
         # Get the message and update the bot_message_id in database
         bot_msg = await interaction.original_response()
         update_bot_message_id(task_number, bot_msg.id)
+
+
+class CallOutModal(ui.Modal, title="Call-Out"):
+    date = ui.TextInput(label="Date", placeholder="YYYY-MM-DD", required=True)
+    reason = ui.TextInput(label="Reason", required=True)
+    notes = ui.TextInput(label="Notes", style=discord.TextStyle.paragraph, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Date": self.date.value,
+            "Reason": self.reason.value,
+            "Notes": self.notes.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "call_out", "Call-Out Logged", fields, "call_outs")
+        await interaction.response.send_message("Your call-out has been logged.", ephemeral=True)
+
+
+class HoursUpdateModal(ui.Modal, title="Hours Update"):
+    date = ui.TextInput(label="Date", placeholder="YYYY-MM-DD", required=True)
+    update = ui.TextInput(label="Update", style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Date": self.date.value,
+            "Update": self.update.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "hours_update", "Hours Update Logged", fields, "hours_updates")
+        await interaction.response.send_message("Your hours update has been logged.", ephemeral=True)
+
+
+class TechCollectionsModal(ui.Modal, title="Tech Collections"):
+    amount = ui.TextInput(label="Amount", placeholder="$0.00", required=True)
+    customer = ui.TextInput(label="Customer / Account", required=True)
+    notes = ui.TextInput(label="Notes", style=discord.TextStyle.paragraph, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Amount": self.amount.value,
+            "Customer": self.customer.value,
+            "Notes": self.notes.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "tech_collection", "Tech Collection Logged", fields, "tech_collections")
+        await interaction.response.send_message("Your tech collection has been logged.", ephemeral=True)
+
+
+class PanelReimbursementModal(ui.Modal, title="Reimbursement"):
+    item = ui.TextInput(label="What for?", required=True)
+    amount = ui.TextInput(label="Amount", placeholder="$0.00", required=False)
+    notes = ui.TextInput(label="Notes", style=discord.TextStyle.paragraph, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Item": self.item.value,
+            "Amount": self.amount.value,
+            "Notes": self.notes.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "reimbursement", "Reimbursement Logged", fields, "requests")
+        await interaction.response.send_message("Your reimbursement request has been logged.", ephemeral=True)
+
+
+class PanelUniformModal(ui.Modal, title="Uniform Request"):
+    item = ui.TextInput(label="Item", placeholder="Shirt, pants, etc.", required=True)
+    size = ui.TextInput(label="Size", required=True)
+    quantity = ui.TextInput(label="Quantity", required=False, default="1")
+    notes = ui.TextInput(label="Notes", style=discord.TextStyle.paragraph, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Item": self.item.value,
+            "Size": self.size.value,
+            "Quantity": self.quantity.value,
+            "Notes": self.notes.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "uniform", "Uniform Request Logged", fields, "requests")
+        await interaction.response.send_message("Your uniform request has been logged.", ephemeral=True)
+
+
+class PanelIDCardModal(ui.Modal, title="ID Card Request"):
+    name = ui.TextInput(label="Name on Card", required=True)
+    reason = ui.TextInput(label="Reason", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Name": self.name.value,
+            "Reason": self.reason.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "id_card", "ID Card Request Logged", fields, "requests")
+        await interaction.response.send_message("Your ID card request has been logged.", ephemeral=True)
+
+
+class PanelCompanyCardModal(ui.Modal, title="Company Card Request"):
+    reason = ui.TextInput(label="Reason for Card", required=True)
+    notes = ui.TextInput(label="Notes", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Reason": self.reason.value,
+            "Notes": self.notes.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "company_card", "Company Card Request Logged", fields, "requests")
+        await interaction.response.send_message("Your company card request has been logged.", ephemeral=True)
+
+
+class VehicleIssueModal(ui.Modal, title="Vehicle Issue"):
+    vehicle = ui.TextInput(label="Vehicle", placeholder="Truck/Van number", required=True)
+    issue = ui.TextInput(label="Issue", style=discord.TextStyle.paragraph, required=True)
+    safe_to_drive = ui.TextInput(label="Is it safe to drive?", placeholder="Yes/No/Unsure", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Vehicle": self.vehicle.value,
+            "Issue": self.issue.value,
+            "Safe to drive": self.safe_to_drive.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, "vehicle_issue", "Vehicle Issue Logged", fields, "vehicle_issues")
+        await interaction.response.send_message("Your vehicle issue has been logged.", ephemeral=True)
+
+
+class GenericRequestModal(ui.Modal):
+    def __init__(self, title: str, request_type: str):
+        super().__init__(title=title)
+        self.request_type = request_type
+        self.what_needed = ui.TextInput(label="What do you need?", style=discord.TextStyle.paragraph, required=True)
+        self.needed_by = ui.TextInput(label="Needed by (optional)", required=False)
+        self.add_item(self.what_needed)
+        self.add_item(self.needed_by)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "Request": self.what_needed.value,
+            "Needed by": self.needed_by.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, self.request_type, f"{self.request_type.replace('_', ' ').title()} Logged", fields, "requests")
+        await interaction.response.send_message("Your request has been logged.", ephemeral=True)
+
+
+class IncidentModal(ui.Modal):
+    def __init__(self, title: str, incident_type: str):
+        super().__init__(title=title)
+        self.incident_type = incident_type
+        self.when_where = ui.TextInput(label="When & where?", required=True)
+        self.what_happened = ui.TextInput(label="What happened?", style=discord.TextStyle.paragraph, required=True)
+        self.injuries = ui.TextInput(label="Injuries/damage?", style=discord.TextStyle.paragraph, required=False)
+        self.add_item(self.when_where)
+        self.add_item(self.what_happened)
+        self.add_item(self.injuries)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        fields = {
+            "When & where": self.when_where.value,
+            "What happened": self.what_happened.value,
+            "Injuries/damage": self.injuries.value,
+            "Submitted by": interaction.user.mention,
+        }
+        await log_event(bot, employee_key, self.incident_type, f"{self.incident_type.replace('_', ' ').title()} Logged", fields, "wpi_reports")
+        await interaction.response.send_message("Your report has been logged.", ephemeral=True)
+
+
+class CampfireEscalationModal(ui.Modal, title="Escalate to Campfire"):
+    subject = ui.TextInput(label="Subject", required=True)
+    description = ui.TextInput(label="Description / Why escalate", style=discord.TextStyle.paragraph, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        employee_key = get_employee_by_log_channel(interaction.channel_id)
+        if not employee_key:
+            await interaction.response.send_message("This channel is not linked to an employee log.", ephemeral=True)
+            return
+
+        employee_info = CONFIG.get("employees", {}).get(employee_key, {})
+        campfire_channel_id = employee_info.get("campfire_channel_id")
+        log_channel_id = employee_info.get("log_channel_id")
+
+        fields = {
+            "Subject": self.subject.value,
+            "Description": self.description.value,
+            "Submitted by": interaction.user.mention,
+        }
+
+        if campfire_channel_id:
+            campfire_channel = bot.get_channel(int(campfire_channel_id))
+            if campfire_channel:
+                summary = (
+                    f"🔥 Campfire Escalation for {employee_key.title()}\n"
+                    f"Subject: {self.subject.value}\n"
+                    f"Description: {self.description.value}\n"
+                )
+                links = []
+                if log_channel_id:
+                    links.append(f"Employee Log: <#{log_channel_id}>")
+                global_log_id = CONFIG.get("global_logs", {}).get("requests")
+                if global_log_id:
+                    links.append(f"Global Log: <#{global_log_id}>")
+                if links:
+                    summary += "\n" + " | ".join(links)
+                await campfire_channel.send(summary)
+
+        await log_event(bot, employee_key, "campfire", "Campfire Escalation", fields, "requests")
+        await interaction.response.send_message("Escalation sent to Campfire.", ephemeral=True)
+
+
+class RequestsSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Print Materials"),
+            discord.SelectOption(label="Safety Gear"),
+            discord.SelectOption(label="Vehicle Issue"),
+            discord.SelectOption(label="Route Change Request"),
+            discord.SelectOption(label="Extra Pest Route"),
+            discord.SelectOption(label="Extra Insulation Route"),
+            discord.SelectOption(label="Meeting Request"),
+            discord.SelectOption(label="Special Inventory"),
+            discord.SelectOption(label="Other Request"),
+        ]
+        super().__init__(
+            placeholder="Requests",
+            options=options,
+            min_values=1,
+            max_values=1,
+            custom_id="request_panel_requests_select",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+        if selection == "Vehicle Issue":
+            await interaction.response.send_modal(VehicleIssueModal())
+            return
+
+        modal_title = f"{selection} Request"
+        request_type = selection.lower().replace(" ", "_")
+        await interaction.response.send_modal(GenericRequestModal(modal_title, request_type))
+
+
+class ReportsSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="WPI — Injured"),
+            discord.SelectOption(label="WPI — Witness"),
+            discord.SelectOption(label="Damage Report"),
+            discord.SelectOption(label="Car Accident"),
+            discord.SelectOption(label="Spill / Chemical Incident"),
+            discord.SelectOption(label="Customer Evidence"),
+            discord.SelectOption(label="Vehicle Swap"),
+            discord.SelectOption(label="Hours Correction Needed"),
+        ]
+        super().__init__(
+            placeholder="Reports",
+            options=options,
+            min_values=1,
+            max_values=1,
+            custom_id="request_panel_reports_select",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+        if selection == "Hours Correction Needed":
+            await interaction.response.send_modal(HoursUpdateModal())
+            return
+
+        incident_type = selection.lower().replace(" ", "_")
+        await interaction.response.send_modal(IncidentModal(selection, incident_type))
+
+
+class RequestPanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(RequestsSelect())
+        self.add_item(ReportsSelect())
+
+    @ui.button(
+        label="Call-Out",
+        emoji="😷",
+        style=discord.ButtonStyle.primary,
+        row=0,
+        custom_id="request_panel_call_out",
+    )
+    async def call_out(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(CallOutModal())
+
+    @ui.button(
+        label="Hours Update",
+        emoji="⏱",
+        style=discord.ButtonStyle.primary,
+        row=0,
+        custom_id="request_panel_hours_update",
+    )
+    async def hours_update(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(HoursUpdateModal())
+
+    @ui.button(
+        label="Tech Collections",
+        emoji="💰",
+        style=discord.ButtonStyle.primary,
+        row=0,
+        custom_id="request_panel_tech_collections",
+    )
+    async def tech_collections(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(TechCollectionsModal())
+
+    @ui.button(
+        label="Reimbursement",
+        emoji="🫰",
+        style=discord.ButtonStyle.primary,
+        row=1,
+        custom_id="request_panel_reimbursement",
+    )
+    async def reimbursement(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(PanelReimbursementModal())
+
+    @ui.button(
+        label="Uniform Request",
+        emoji="👕",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        custom_id="request_panel_uniform",
+    )
+    async def uniform_request(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(PanelUniformModal())
+
+    @ui.button(
+        label="ID Card Request",
+        emoji="🪪",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        custom_id="request_panel_id_card",
+    )
+    async def id_card(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(PanelIDCardModal())
+
+    @ui.button(
+        label="Company Card Request",
+        emoji="💳",
+        style=discord.ButtonStyle.secondary,
+        row=2,
+        custom_id="request_panel_company_card",
+    )
+    async def company_card(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(PanelCompanyCardModal())
+
+    @ui.button(
+        label="Escalate to Campfire",
+        emoji="🔥",
+        style=discord.ButtonStyle.danger,
+        row=2,
+        custom_id="request_panel_escalate_campfire",
+    )
+    async def escalate(
+        self, interaction: discord.Interaction, button: ui.Button
+    ):
+        await interaction.response.send_modal(CampfireEscalationModal())
 
 
 class RequestButtonsView(ui.View):
@@ -2087,11 +2747,73 @@ async def on_ready():
         check_important_message_reminders.start()
         print('✅ Important message reminder task started')
 
+    # Persistent views
+    bot.add_view(RequestPanelView())
+
     try:
         await bot.tree.sync()
         print("✅ Slash commands synced.")
     except Exception as e:
         print(f"❌ Error syncing slash commands: {e}")
+
+
+def build_request_panel_embed() -> discord.Embed:
+    return discord.Embed(
+        title="Request & Reports",
+        description=(
+            "Use the buttons and dropdowns below to submit requests, reports, or escalations. "
+            "Entries will be logged to leadership channels automatically."
+        ),
+        color=discord.Color.blurple(),
+    )
+
+
+@bot.command(name="setup_panel")
+@commands.has_permissions(administrator=True)
+async def setup_panel(ctx: commands.Context, employee_key: Optional[str] = None):
+    """Post and pin the request panel in an employee log channel."""
+
+    target_employee_key = None
+    target_channel = None
+
+    if employee_key:
+        candidate_key = employee_key.lower()
+        employee_info = CONFIG.get("employees", {}).get(candidate_key)
+        log_channel_id = employee_info.get("log_channel_id") if employee_info else None
+        if not employee_info or not log_channel_id:
+            await ctx.send(
+                "Unknown employee key or missing log channel in config. "
+                "Double-check CONFIG['employees'].")
+            return
+
+        channel_obj = bot.get_channel(int(log_channel_id))
+        if not channel_obj:
+            await ctx.send("I couldn't find that employee log channel. Is the ID correct?")
+            return
+
+        target_employee_key = candidate_key
+        target_channel = channel_obj
+    else:
+        target_employee_key = get_employee_by_log_channel(ctx.channel.id)
+        target_channel = ctx.channel if target_employee_key else None
+
+    if not target_employee_key or not target_channel:
+        await ctx.send(
+            "Provide an employee key or run this in a mapped log channel.\n"
+            "Usage: `@setup_panel <employee_key>`"
+        )
+        return
+
+    message = await target_channel.send(embed=build_request_panel_embed(), view=RequestPanelView())
+    try:
+        await message.pin()
+    except discord.Forbidden:
+        await ctx.send("Panel posted but I could not pin it. Please pin manually.")
+    else:
+        await ctx.send(
+            f"Panel posted and pinned in {target_channel.mention} for {target_employee_key.title()}.",
+            delete_after=10,
+        )
 
 @bot.event
 async def on_message(message):
@@ -2106,38 +2828,7 @@ async def on_message(message):
             await message.channel.send("❌ You need administrator permissions to use this command.")
             return
 
-        embed = discord.Embed(
-            title="📋 Submit a Request",
-            description=(
-                "Click a button below to submit a request.\n"
-                "A form will pop up - fill it out and hit submit!\n\n"
-                "Your requests and status updates will appear in this channel."
-            ),
-            color=0x5865F2
-        )
-        embed.add_field(
-            name="Common Requests",
-            value=(
-                "👕 **Uniform** - polos, hats, jackets\n"
-                "🚗 **Vehicle** - maintenance issues\n"
-                "🖨️ **Print** - door hangers, cards, flyers"
-            ),
-            inline=False
-        )
-        embed.add_field(
-            name="Other Requests",
-            value=(
-                "🪪 **ID Card** - new or replacement\n"
-                "💰 **Reimburse** - expense reimbursement\n"
-                "📅 **Meeting** - request a meeting\n"
-                "🦺 **Safety Gear** - PPE requests\n"
-                "📦 **Other** - anything else"
-            ),
-            inline=False
-        )
-        embed.set_footer(text="You can also use the web form: [link goes here]")
-
-        await message.channel.send(embed=embed, view=RequestButtonsView())
+        await message.channel.send(embed=build_request_panel_embed(), view=RequestPanelView())
 
         # Try to delete the command message to keep the channel clean
         try:
@@ -2205,7 +2896,28 @@ async def on_message(message):
     
     # Handle @hey command
     if message.content.startswith('@hey '):
-        task_content = message.content[9:].strip()
+        task_content = message.content[len('@hey '):].strip()
+        rt_employee = get_employee_by_rt_channel(message.channel.id)
+
+        if rt_employee:
+            event_type = detect_hey_event(task_content)
+            await message.channel.send(f"Hey there, {message.author.mention}! I’m on it.")
+
+            if event_type:
+                fields = {
+                    "Summary": task_content,
+                    "Submitted by": message.author.mention,
+                }
+                global_log_key = "call_outs" if event_type == "call_out" else "vehicle_issues"
+                title = "Call-Out Logged" if event_type == "call_out" else "Vehicle Issue Logged"
+                await log_event(bot, rt_employee, event_type, title, fields, global_log_key)
+
+                global_channel_id = CONFIG.get("global_logs", {}).get(global_log_key)
+                receipt_target = f"<#{global_channel_id}>" if global_channel_id else "the log channel"
+                await message.channel.send(f"(Bot) Logged this as {title} in {receipt_target}.")
+            return
+
+        # Fallback to legacy behavior for non-RT channels
         cleaned_content, metadata = parse_task_metadata(task_content)
 
         task_number = add_task(
