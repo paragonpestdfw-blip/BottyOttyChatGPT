@@ -2695,38 +2695,7 @@ async def on_message(message):
             await message.channel.send("❌ You need administrator permissions to use this command.")
             return
 
-        embed = discord.Embed(
-            title="📋 Submit a Request",
-            description=(
-                "Click a button below to submit a request.\n"
-                "A form will pop up - fill it out and hit submit!\n\n"
-                "Your requests and status updates will appear in this channel."
-            ),
-            color=0x5865F2
-        )
-        embed.add_field(
-            name="Common Requests",
-            value=(
-                "👕 **Uniform** - polos, hats, jackets\n"
-                "🚗 **Vehicle** - maintenance issues\n"
-                "🖨️ **Print** - door hangers, cards, flyers"
-            ),
-            inline=False
-        )
-        embed.add_field(
-            name="Other Requests",
-            value=(
-                "🪪 **ID Card** - new or replacement\n"
-                "💰 **Reimburse** - expense reimbursement\n"
-                "📅 **Meeting** - request a meeting\n"
-                "🦺 **Safety Gear** - PPE requests\n"
-                "📦 **Other** - anything else"
-            ),
-            inline=False
-        )
-        embed.set_footer(text="You can also use the web form: [link goes here]")
-
-        await message.channel.send(embed=embed, view=RequestButtonsView())
+        await message.channel.send(embed=build_request_panel_embed(), view=RequestPanelView())
 
         # Try to delete the command message to keep the channel clean
         try:
