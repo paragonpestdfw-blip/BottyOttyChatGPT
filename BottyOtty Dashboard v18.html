@@ -656,9 +656,236 @@
         flex-direction: column;
         gap: calc(var(--card-gap) / 2);
       }
+
+      /* ========================================
+         🧭 SIDEBAR NAVIGATION
+         ======================================== */
+
+      #sidebarNav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        background: rgba(15, 15, 35, 0.98);
+        backdrop-filter: blur(20px);
+        border-right: 2px solid rgba(255, 255, 255, 0.1);
+        z-index: 9998;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+        transition: all 0.4s ease;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #sidebarNav:not(.collapsed) { width: 280px; }
+      #sidebarNav.collapsed { width: 70px; }
+
+      #sidebarNav.collapsed .nav-item-label,
+      #sidebarNav.collapsed .sidebar-header-text,
+      #sidebarNav.collapsed .sidebar-footer-text {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+      }
+
+      .sidebar-inner {
+        padding: 20px 0;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .sidebar-header {
+        padding: 0 20px 20px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .sidebar-header-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sidebar-logo {
+        font-size: 32px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-header-text {
+        transition: all 0.4s ease;
+        white-space: nowrap;
+      }
+
+      .sidebar-header-text h2 {
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+      }
+
+      .sidebar-header-text p {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        margin: 2px 0 0 0;
+      }
+
+      .sidebar-nav-items {
+        flex: 1;
+        padding: 0 12px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        transform: translateX(4px);
+      }
+
+      .nav-item.active {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(236, 72, 153, 0.3) 100%);
+        color: white;
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+      }
+
+      .nav-item-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+        width: 24px;
+        text-align: center;
+      }
+
+      .nav-item-label {
+        font-weight: 600;
+        font-size: 15px;
+        white-space: nowrap;
+        transition: all 0.4s ease;
+      }
+
+      .sidebar-footer {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: auto;
+      }
+
+      .sidebar-toggle-btn {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .sidebar-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      .sidebar-footer-text {
+        transition: all 0.4s ease;
+        white-space: nowrap;
+      }
+
+      /* Adjust main content when sidebar is expanded */
+      body:not(.sidebar-collapsed) #root {
+        margin-left: 280px;
+        transition: margin-left 0.4s ease;
+      }
+
+      body.sidebar-collapsed #root {
+        margin-left: 70px;
+        transition: margin-left 0.4s ease;
+      }
+
+      /* Responsive behavior */
+      @media (max-width: 1024px) {
+        #sidebarNav:not(.collapsed) { width: 280px; }
+        body:not(.sidebar-collapsed) #root { margin-left: 0; }
+        body.sidebar-collapsed #root { margin-left: 0; }
+        #sidebarNav.collapsed { transform: translateX(-100%); }
+      }
     </style>
   </head>
   <body>
+    <!-- Sidebar Navigation -->
+    <div id="sidebarNav" class="">
+      <div class="sidebar-inner">
+        <div class="sidebar-header">
+          <div class="sidebar-header-content">
+            <div class="sidebar-logo">🤖</div>
+            <div class="sidebar-header-text">
+              <h2>BottyOtty</h2>
+              <p>Task Manager</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-nav-items">
+          <!-- Dashboard - Mark as active on Dashboard page -->
+          <a href="BottyOtty Dashboard v18.html" class="nav-item active">
+            <span class="nav-item-icon">📊</span>
+            <span class="nav-item-label">Dashboard</span>
+          </a>
+
+          <!-- Admin Panel - Mark as active on Admin page -->
+          <a href="Admin Panel v18.html" class="nav-item">
+            <span class="nav-item-icon">⚙️</span>
+            <span class="nav-item-label">Admin Panel</span>
+          </a>
+
+          <!-- Quick Launch - Mark as active on Quick Launch page -->
+          <a href="Quick Launch v18.html" class="nav-item">
+            <span class="nav-item-icon">🚀</span>
+            <span class="nav-item-label">Quick Launch</span>
+          </a>
+
+          <!-- Reports - Mark as active on Reports page -->
+          <a href="BottyOtty Reports v18.html" class="nav-item">
+            <span class="nav-item-icon">📈</span>
+            <span class="nav-item-label">Reports</span>
+          </a>
+
+          <!-- Help - Mark as active on Help page -->
+          <a href="BottyOtty Help & User Guide v18.html" class="nav-item">
+            <span class="nav-item-icon">❓</span>
+            <span class="nav-item-label">Help Guide</span>
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <button onclick="toggleSidebar()" class="sidebar-toggle-btn">
+            <span id="sidebarToggleIcon">←</span>
+            <span class="sidebar-footer-text" id="sidebarToggleText">Collapse</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Customization Toggle Button -->
     <button id="customizeToggleBtn" onclick="toggleCustomizationPanel()">
       ⚙️
@@ -3688,6 +3915,12 @@
           }
         });
 
+        // Sidebar state
+        const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-sidebar-collapsed');
+          return saved === 'true';
+        });
+
         const [activeView, setActiveView] = useState("incoming");
         const [editingTask, setEditingTask] = useState(null);
         const [showAddTask, setShowAddTask] = useState(false);
@@ -3761,6 +3994,33 @@
 
         // User configuration (loaded from localStorage or defaults)
         const [USER_CONFIG, setUSER_CONFIG] = useState(() => loadUserConfig());
+
+        // Sidebar toggle effect
+        useEffect(() => {
+          const sidebar = document.getElementById('sidebarNav');
+          const icon = document.getElementById('sidebarToggleIcon');
+          const text = document.getElementById('sidebarToggleText');
+
+          if (sidebarCollapsed) {
+            document.body.classList.add('sidebar-collapsed');
+            if (sidebar) sidebar.classList.add('collapsed');
+            if (icon) icon.textContent = '→';
+            if (text) text.textContent = 'Expand';
+          } else {
+            document.body.classList.remove('sidebar-collapsed');
+            if (sidebar) sidebar.classList.remove('collapsed');
+            if (icon) icon.textContent = '←';
+            if (text) text.textContent = 'Collapse';
+          }
+          localStorage.setItem('bottyotty-sidebar-collapsed', sidebarCollapsed);
+        }, [sidebarCollapsed]);
+
+        // Sidebar toggle function - make it globally accessible
+        useEffect(() => {
+          window.toggleSidebar = () => {
+            setSidebarCollapsed(prev => !prev);
+          };
+        }, []);
 
         // Log when USER_CONFIG or currentUser changes (to debug button visibility)
         useEffect(() => {
