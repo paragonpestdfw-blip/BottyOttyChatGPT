@@ -2312,11 +2312,11 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = \`\${pageBuilderName.replace(/\\s+/g, ' ')} v18.html\`;
+          a.download = `${pageBuilderName.replace(/\s+/g, ' ')} v18.html`;
           a.click();
           URL.revokeObjectURL(url);
 
-          alert(\`✅ Page "\${pageBuilderName}" created successfully!\\n\\nThe HTML file has been downloaded. You can now customize it further or add it to your navigation.\`);
+          alert(`✅ Page "${pageBuilderName}" created successfully!\n\nThe HTML file has been downloaded. You can now customize it further or add it to your navigation.`);
 
           // Reset form
           setPageBuilderName('');
