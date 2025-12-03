@@ -1096,6 +1096,15 @@
         box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
       }
 
+      /* When collapsed, show active state as left border only */
+      #sidebarNav.collapsed .nav-item.active {
+        background: transparent;
+        border: 1px solid transparent;
+        border-left: 4px solid #667eea;
+        box-shadow: none;
+        padding-left: 13px;
+      }
+
       .nav-item-icon {
         font-size: 22px;
         flex-shrink: 0;
@@ -3517,7 +3526,8 @@
       }
 
       function initSidebar() {
-        const isCollapsed = localStorage.getItem('bottyotty-sidebar-collapsed') === 'true';
+        const saved = localStorage.getItem('bottyotty-sidebar-collapsed');
+        const isCollapsed = saved !== null ? saved === 'true' : true; // Default to true (collapsed)
         const sidebar = document.getElementById('sidebarNav');
         const icon = document.getElementById('sidebarToggleIcon');
         const text = document.getElementById('sidebarToggleText');
@@ -3527,6 +3537,7 @@
           document.body.classList.add('sidebar-collapsed');
           icon.textContent = '→';
           text.textContent = 'Expand';
+          localStorage.setItem('bottyotty-sidebar-collapsed', 'true');
         }
       }
 

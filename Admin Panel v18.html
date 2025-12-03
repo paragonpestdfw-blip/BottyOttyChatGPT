@@ -946,6 +946,15 @@
         box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
       }
 
+      /* When collapsed, show active state as left border only */
+      #sidebarNav.collapsed .nav-item.active {
+        background: transparent;
+        border: 1px solid transparent;
+        border-left: 4px solid #667eea;
+        box-shadow: none;
+        padding-left: 13px;
+      }
+
       .nav-item-icon {
         font-size: 22px;
         flex-shrink: 0;
@@ -1663,10 +1672,10 @@
         const [toastMessage, setToastMessage] = useState(null);
         const [isRefreshing, setIsRefreshing] = useState(false);
 
-        // Sidebar state
+        // Sidebar state - default to collapsed
         const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
           const saved = localStorage.getItem('bottyotty-sidebar-collapsed');
-          return saved === 'true';
+          return saved !== null ? saved === 'true' : true; // Default to true (collapsed)
         });
 
         // Appearance Settings
@@ -2730,18 +2739,6 @@
                 </div>
 
                 <div className="flex gap-3">
-                  <a
-                    href="BottyOtty Dashboard v18.html"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all"
-                  >
-                    📋 Back to Dashboard
-                  </a>
-                  <a
-                    href="Quick Launch v18.html"
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all"
-                  >
-                    🚀 Quick Launch
-                  </a>
                   <button
                     onClick={saveToAPI}
                     disabled={loading}
