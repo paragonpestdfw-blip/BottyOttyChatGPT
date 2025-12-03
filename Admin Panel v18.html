@@ -2037,6 +2037,113 @@
           alert('✅ Admin override password updated successfully!');
         };
 
+        // Backup & Restore
+        const [showBackupRestore, setShowBackupRestore] = useState(false);
+        const [backupHistory, setBackupHistory] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-backup-history');
+          return saved ? JSON.parse(saved) : [];
+        });
+
+        // Get all localStorage data for backup
+        const getAllLocalStorageData = () => {
+          const data = {};
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('bottyotty-')) {
+              data[key] = localStorage.getItem(key);
+            }
+          }
+          return data;
+        };
+
+        // Create backup
+        const createBackup = () => {
+          const backup = {
+            timestamp: new Date().toISOString(),
+            date: new Date().toLocaleString(),
+            data: getAllLocalStorageData(),
+            version: '1.0'
+          };
+
+          // Download backup file
+          const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `bottyotty-backup-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          // Add to backup history
+          const newHistory = [...backupHistory, {
+            timestamp: backup.timestamp,
+            date: backup.date,
+            keys: Object.keys(backup.data).length
+          }].slice(-10); // Keep last 10
+
+          setBackupHistory(newHistory);
+          localStorage.setItem('bottyotty-backup-history', JSON.stringify(newHistory));
+
+          alert('✅ Backup created successfully!');
+        };
+
+        // Restore from backup
+        const restoreFromBackup = (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const confirmed = confirm('⚠️ WARNING: This will overwrite all current data. Are you sure?');
+          if (!confirmed) return;
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const backup = JSON.parse(e.target.result);
+
+              if (!backup.data || !backup.timestamp) {
+                alert('❌ Invalid backup file format');
+                return;
+              }
+
+              // Restore all data
+              Object.entries(backup.data).forEach(([key, value]) => {
+                localStorage.setItem(key, value);
+              });
+
+              alert(`✅ Data restored from backup!\n\nBackup date: ${backup.date}\nRestored ${Object.keys(backup.data).length} items\n\nPage will reload...`);
+
+              // Reload page to reflect restored data
+              setTimeout(() => window.location.reload(), 1500);
+            } catch (error) {
+              alert('❌ Error restoring backup: ' + error.message);
+            }
+          };
+          reader.readAsText(file);
+        };
+
+        // Clear all data
+        const clearAllData = () => {
+          const confirmed = confirm('⚠️ DANGER: This will delete ALL data. This cannot be undone. Are you absolutely sure?');
+          if (!confirmed) return;
+
+          const doubleConfirm = confirm('⚠️ FINAL WARNING: All tasks, settings, passwords, and configurations will be permanently deleted. Continue?');
+          if (!doubleConfirm) return;
+
+          // Clear all bottyotty data
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('bottyotty-')) {
+              keys.push(key);
+            }
+          }
+
+          keys.forEach(key => localStorage.removeItem(key));
+
+          alert('✅ All data has been cleared. Page will reload...');
+          setTimeout(() => window.location.reload(), 1000);
+        };
+
         // Sidebar toggle effect
         useEffect(() => {
           const sidebar = document.getElementById('sidebarNav');
@@ -2885,6 +2992,13 @@
                     title="Manage user passwords"
                   >
                     🔐 Passwords
+                  </button>
+                  <button
+                    onClick={() => setShowBackupRestore(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg font-bold transition-all shadow-lg"
+                    title="Backup and restore data"
+                  >
+                    💾 Backup Data
                   </button>
                   <button
                     onClick={saveToAPI}
@@ -8125,6 +8239,127 @@ ${officeInfo.notes}
                   <div className="flex gap-3 pt-6">
                     <button
                       onClick={() => setShowPasswordManagement(false)}
+                      className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backup & Restore Modal */}
+            {showBackupRestore && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                onClick={() => setShowBackupRestore(false)}
+              >
+                <div
+                  className="glass rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-white">💾 Backup & Restore</h2>
+                    <button
+                      onClick={() => setShowBackupRestore(false)}
+                      className="text-white hover:text-red-400 text-2xl font-bold"
+                    >
+                      ✖
+                    </button>
+                  </div>
+
+                  {/* What Gets Backed Up */}
+                  <div className="glass-element rounded-lg p-6 mb-6 border-2 border-blue-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-4">📦 What Gets Backed Up</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {(() => {
+                        const data = getAllLocalStorageData();
+                        const categories = {
+                          'Tasks': Object.keys(data).filter(k => k.includes('task')).length,
+                          'Users': Object.keys(data).filter(k => k.includes('user') || k.includes('member')).length,
+                          'Settings': Object.keys(data).filter(k => k.includes('settings') || k.includes('config')).length,
+                          'Passwords': Object.keys(data).filter(k => k.includes('password')).length,
+                          'Office Info': Object.keys(data).filter(k => k.includes('office')).length,
+                          'Notes': Object.keys(data).filter(k => k.includes('note')).length
+                        };
+                        return Object.entries(categories).map(([cat, count]) => (
+                          <div key={cat} className="bg-white bg-opacity-10 p-3 rounded text-center">
+                            <p className="text-white font-bold">{cat}</p>
+                            <p className="text-blue-300 text-2xl">{count}</p>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <p className="text-gray-300 text-sm mt-4">
+                      Total items: <strong className="text-white">{Object.keys(getAllLocalStorageData()).length}</strong>
+                    </p>
+                  </div>
+
+                  {/* Create Backup */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-2">💾 Create Backup</h3>
+                    <p className="text-gray-300 text-sm mb-4">Download all your data to a JSON file for safekeeping</p>
+                    <button
+                      onClick={createBackup}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      📥 Download Backup File
+                    </button>
+                  </div>
+
+                  {/* Restore from Backup */}
+                  <div className="glass-element rounded-lg p-6 mb-6 border-2 border-orange-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-2">📤 Restore from Backup</h3>
+                    <p className="text-gray-300 text-sm mb-4">Upload a backup file to restore your data</p>
+                    <label className="block">
+                      <div className="w-full px-6 py-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg font-bold transition-all cursor-pointer text-center">
+                        📂 Choose Backup File
+                      </div>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={restoreFromBackup}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-yellow-300 text-sm mt-3">
+                      ⚠️ Warning: This will overwrite all current data
+                    </p>
+                  </div>
+
+                  {/* Backup History */}
+                  {backupHistory.length > 0 && (
+                    <div className="glass-element rounded-lg p-6 mb-6">
+                      <h3 className="text-xl font-bold text-white mb-4">📜 Recent Backups</h3>
+                      <div className="space-y-2">
+                        {backupHistory.slice().reverse().map((backup, idx) => (
+                          <div key={idx} className="bg-white bg-opacity-10 p-3 rounded flex justify-between items-center">
+                            <div>
+                              <p className="text-white font-bold">{backup.date}</p>
+                              <p className="text-gray-300 text-sm">{backup.keys} items backed up</p>
+                            </div>
+                            <span className="text-green-400">✅</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Danger Zone */}
+                  <div className="glass-element rounded-lg p-6 border-2 border-red-500 border-opacity-50">
+                    <h3 className="text-xl font-bold text-red-400 mb-2">⚠️ Danger Zone</h3>
+                    <p className="text-gray-300 text-sm mb-4">Permanently delete all data. This cannot be undone!</p>
+                    <button
+                      onClick={clearAllData}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-red-700 to-red-900 hover:from-red-800 hover:to-red-950 text-white rounded-lg font-bold transition-all"
+                    >
+                      🗑️ Clear All Data
+                    </button>
+                  </div>
+
+                  <div className="flex gap-3 pt-6">
+                    <button
+                      onClick={() => setShowBackupRestore(false)}
                       className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
                     >
                       Close
