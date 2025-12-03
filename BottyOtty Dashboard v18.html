@@ -632,10 +632,24 @@
         margin-bottom: var(--card-gap) !important;
       }
 
-      body.layout-dashboard-grid #root > div {
+      /* Dashboard Grid: Show all task categories in a grid layout */
+      body.layout-dashboard-grid .dashboard-grid-container {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
         gap: var(--card-gap);
+        align-items: start;
+      }
+
+      body.layout-dashboard-grid .dashboard-grid-item {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      body.layout-dashboard-grid .dashboard-grid-item .view-content {
+        flex: 1;
+        overflow: auto;
+        max-height: 600px;
       }
 
       /* List View Clean Layout */
@@ -4003,6 +4017,26 @@
 
         // User configuration (loaded from localStorage or defaults)
         const [USER_CONFIG, setUSER_CONFIG] = useState(() => loadUserConfig());
+
+        // Track if dashboard grid layout is active
+        const [isGridLayout, setIsGridLayout] = useState(false);
+
+        // Watch for layout changes
+        useEffect(() => {
+          const observer = new MutationObserver(() => {
+            setIsGridLayout(document.body.classList.contains('layout-dashboard-grid'));
+          });
+
+          observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+          });
+
+          // Initial check
+          setIsGridLayout(document.body.classList.contains('layout-dashboard-grid'));
+
+          return () => observer.disconnect();
+        }, []);
 
         // Sidebar toggle effect
         useEffect(() => {
@@ -8013,6 +8047,225 @@
                     </div>
                   )}
                 </>
+              ) : isGridLayout ? (
+                /* Dashboard Grid View - Show all categories */
+                <div className="dashboard-grid-container">
+                  {/* Incoming Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📥 Incoming
+                      <span className="text-sm bg-blue-600 px-2 py-1 rounded">
+                        {incomingTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {incomingTasks.length > 0 ? (
+                        incomingTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No incoming tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* My Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📋 My Tasks
+                      <span className="text-sm bg-purple-600 px-2 py-1 rounded">
+                        {myTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {myTasks.length > 0 ? (
+                        myTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Assigned Out */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📤 Assigned Out
+                      <span className="text-sm bg-orange-600 px-2 py-1 rounded">
+                        {assignedOutTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {assignedOutTasks.length > 0 ? (
+                        assignedOutTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No assigned out tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pool Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🏊 Pool
+                      <span className="text-sm bg-cyan-600 px-2 py-1 rounded">
+                        {poolTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {poolTasks.length > 0 ? (
+                        poolTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No pool tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Campfire */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🔥 Campfire
+                      <span className="text-sm bg-red-600 px-2 py-1 rounded">
+                        {campfireTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {campfireTasks.length > 0 ? (
+                        campfireTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No campfire tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Requests */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🎯 Requests
+                      <span className="text-sm bg-green-600 px-2 py-1 rounded">
+                        {teamTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {teamTasks.length > 0 ? (
+                        teamTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No requests
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div
                   className="drop-zone space-y-4 view-content"
