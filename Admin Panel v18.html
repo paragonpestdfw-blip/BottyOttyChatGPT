@@ -1935,6 +1935,108 @@
           });
         };
 
+        // Password Management
+        const [userPasswords, setUserPasswords] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-user-passwords');
+          return saved ? JSON.parse(saved) : {};
+        });
+
+        const [adminOverridePassword, setAdminOverridePassword] = useState(() => {
+          return localStorage.getItem('bottyotty-admin-override') || 'ParagonAdmin2025!';
+        });
+
+        const [selectedPasswordUser, setSelectedPasswordUser] = useState('');
+        const [newPassword, setNewPassword] = useState('');
+        const [confirmPassword, setConfirmPassword] = useState('');
+        const [overridePasswordInput, setOverridePasswordInput] = useState('');
+        const [showPasswordManagement, setShowPasswordManagement] = useState(false);
+
+        // Save user passwords
+        useEffect(() => {
+          localStorage.setItem('bottyotty-user-passwords', JSON.stringify(userPasswords));
+        }, [userPasswords]);
+
+        // Save admin override password
+        useEffect(() => {
+          localStorage.setItem('bottyotty-admin-override', adminOverridePassword);
+        }, [adminOverridePassword]);
+
+        // Change user password
+        const changeUserPassword = () => {
+          if (!selectedPasswordUser) {
+            alert('Please select a user');
+            return;
+          }
+          if (newPassword !== confirmPassword) {
+            alert('Passwords do not match!');
+            return;
+          }
+          if (newPassword.length < 6) {
+            alert('Password must be at least 6 characters');
+            return;
+          }
+
+          setUserPasswords(prev => ({
+            ...prev,
+            [selectedPasswordUser]: newPassword
+          }));
+
+          alert(`Password updated for ${selectedPasswordUser}`);
+          setNewPassword('');
+          setConfirmPassword('');
+          setSelectedPasswordUser('');
+        };
+
+        // Reset password with admin override
+        const resetWithOverride = () => {
+          if (overridePasswordInput !== adminOverridePassword) {
+            alert('❌ Invalid admin override password!');
+            return;
+          }
+
+          if (!selectedPasswordUser) {
+            alert('Please select a user to reset');
+            return;
+          }
+
+          // Generate random password
+          const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10).toUpperCase();
+
+          setUserPasswords(prev => ({
+            ...prev,
+            [selectedPasswordUser]: randomPassword
+          }));
+
+          alert(`✅ Password reset for ${selectedPasswordUser}\n\nNew password: ${randomPassword}\n\n(Password copied to clipboard)`);
+          copyToClipboard(randomPassword, 'New Password');
+          setOverridePasswordInput('');
+          setSelectedPasswordUser('');
+        };
+
+        // Change admin override password
+        const changeOverridePassword = () => {
+          const currentOverride = prompt('Enter current admin override password:');
+          if (currentOverride !== adminOverridePassword) {
+            alert('❌ Incorrect current override password!');
+            return;
+          }
+
+          const newOverride = prompt('Enter new admin override password (min 8 characters):');
+          if (!newOverride || newOverride.length < 8) {
+            alert('❌ Password must be at least 8 characters');
+            return;
+          }
+
+          const confirmOverride = prompt('Confirm new admin override password:');
+          if (newOverride !== confirmOverride) {
+            alert('❌ Passwords do not match!');
+            return;
+          }
+
+          setAdminOverridePassword(newOverride);
+          alert('✅ Admin override password updated successfully!');
+        };
+
         // Sidebar toggle effect
         useEffect(() => {
           const sidebar = document.getElementById('sidebarNav');
@@ -2776,6 +2878,13 @@
                     title="View and copy office information"
                   >
                     🏢 Office Info
+                  </button>
+                  <button
+                    onClick={() => setShowPasswordManagement(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg font-bold transition-all shadow-lg"
+                    title="Manage user passwords"
+                  >
+                    🔐 Passwords
                   </button>
                   <button
                     onClick={saveToAPI}
@@ -7869,6 +7978,157 @@ ${officeInfo.notes}
                         Close
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Password Management Modal */}
+            {showPasswordManagement && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                onClick={() => setShowPasswordManagement(false)}
+              >
+                <div
+                  className="glass rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-white">🔐 Password Management</h2>
+                    <button
+                      onClick={() => setShowPasswordManagement(false)}
+                      className="text-white hover:text-red-400 text-2xl font-bold"
+                    >
+                      ✖
+                    </button>
+                  </div>
+
+                  {/* Change User Password Section */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-4">📝 Change User Password</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-white font-bold mb-2">Select User</label>
+                        <select
+                          value={selectedPasswordUser}
+                          onChange={(e) => setSelectedPasswordUser(e.target.value)}
+                          className="w-full px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded text-white"
+                        >
+                          <option value="">-- Select a user --</option>
+                          {TEAM_MEMBERS.map(member => (
+                            <option key={member.name} value={member.name}>{member.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-white font-bold mb-2">New Password (min 6 characters)</label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded text-white"
+                          placeholder="Enter new password"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-white font-bold mb-2">Confirm Password</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded text-white"
+                          placeholder="Confirm new password"
+                        />
+                      </div>
+
+                      <button
+                        onClick={changeUserPassword}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        ✅ Change Password
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Admin Override Reset Section */}
+                  <div className="glass-element rounded-lg p-6 mb-6 border-2 border-red-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-2">🚨 Admin Override Password Reset</h3>
+                    <p className="text-gray-300 text-sm mb-4">Use this to reset any user's password if they forget it. Requires admin override password.</p>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-white font-bold mb-2">Select User to Reset</label>
+                        <select
+                          value={selectedPasswordUser}
+                          onChange={(e) => setSelectedPasswordUser(e.target.value)}
+                          className="w-full px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded text-white"
+                        >
+                          <option value="">-- Select a user --</option>
+                          {TEAM_MEMBERS.map(member => (
+                            <option key={member.name} value={member.name}>{member.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-white font-bold mb-2">Admin Override Password</label>
+                        <input
+                          type="password"
+                          value={overridePasswordInput}
+                          onChange={(e) => setOverridePasswordInput(e.target.value)}
+                          className="w-full px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded text-white"
+                          placeholder="Enter admin override password"
+                        />
+                      </div>
+
+                      <button
+                        onClick={resetWithOverride}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        🔄 Reset Password (Generates Random)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Change Admin Override Password */}
+                  <div className="glass-element rounded-lg p-6 border-2 border-yellow-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-2">⚙️ Change Admin Override Password</h3>
+                    <p className="text-gray-300 text-sm mb-4">This password can reset ANY user password. Keep it secure!</p>
+                    <button
+                      onClick={changeOverridePassword}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      🔑 Change Override Password
+                    </button>
+                  </div>
+
+                  {/* Current Passwords List */}
+                  <div className="glass-element rounded-lg p-6 mt-6">
+                    <h3 className="text-xl font-bold text-white mb-4">👥 Users with Passwords Set</h3>
+                    {Object.keys(userPasswords).length === 0 ? (
+                      <p className="text-gray-400 text-sm">No passwords set yet</p>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {Object.keys(userPasswords).map(userName => (
+                          <div key={userName} className="bg-white bg-opacity-10 p-3 rounded">
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-400">✅</span>
+                              <span className="text-white font-medium">{userName}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 pt-6">
+                    <button
+                      onClick={() => setShowPasswordManagement(false)}
+                      className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      Close
+                    </button>
                   </div>
                 </div>
               </div>
