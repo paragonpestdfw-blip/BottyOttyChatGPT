@@ -2144,6 +2144,195 @@
           setTimeout(() => window.location.reload(), 1000);
         };
 
+        // Page Builder
+        const [showPageBuilder, setShowPageBuilder] = useState(false);
+        const [selectedTemplate, setSelectedTemplate] = useState('dashboard');
+        const [pageBuilderName, setPageBuilderName] = useState('');
+        const [pageBuilderDescription, setPageBuilderDescription] = useState('');
+        const [selectedFeatures, setSelectedFeatures] = useState({
+          taskLists: false,
+          charts: false,
+          forms: false,
+          calendar: false,
+          notes: false,
+          fileUpload: false,
+          search: false,
+          filters: false
+        });
+
+        // Template definitions
+        const pageTemplates = {
+          dashboard: {
+            name: 'Dashboard Layout',
+            description: 'Multi-column layout with cards and task management',
+            icon: '📊',
+            features: ['taskLists', 'notes', 'search', 'filters']
+          },
+          reports: {
+            name: 'Reports Layout',
+            description: 'Data visualization with charts and analytics',
+            icon: '📈',
+            features: ['charts', 'fileUpload', 'filters']
+          },
+          simple: {
+            name: 'Simple Page',
+            description: 'Clean single-column layout for basic content',
+            icon: '📄',
+            features: ['forms', 'notes']
+          },
+          calendar: {
+            name: 'Calendar Layout',
+            description: 'Event management with calendar view',
+            icon: '📅',
+            features: ['calendar', 'forms', 'search']
+          }
+        };
+
+        // Toggle feature selection
+        const toggleFeature = (feature) => {
+          setSelectedFeatures(prev => ({
+            ...prev,
+            [feature]: !prev[feature]
+          }));
+        };
+
+        // Generate page from template
+        const generatePage = () => {
+          if (!pageBuilderName.trim()) {
+            alert('Please enter a page name');
+            return;
+          }
+
+          const template = pageTemplates[selectedTemplate];
+          const enabledFeatures = Object.entries(selectedFeatures)
+            .filter(([_, enabled]) => enabled)
+            .map(([feature, _]) => feature);
+
+          // Create HTML content
+          const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${pageBuilderName} - BottyOtty</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  ${enabledFeatures.includes('charts') ? '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>' : ''}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: white;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+
+    .glass-element {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      ${enabledFeatures.includes('taskLists') ? `
+      const [tasks, setTasks] = useState(() => {
+        const saved = localStorage.getItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-tasks');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      useEffect(() => {
+        localStorage.setItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-tasks', JSON.stringify(tasks));
+      }, [tasks]);
+      ` : ''}
+
+      ${enabledFeatures.includes('notes') ? `
+      const [notes, setNotes] = useState(() => {
+        const saved = localStorage.getItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-notes');
+        return saved ? JSON.parse(saved) : '';
+      });
+
+      useEffect(() => {
+        localStorage.setItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-notes', notes);
+      }, [notes]);
+      ` : ''}
+
+      return (
+        <div className="max-w-7xl mx-auto">
+          <div className="glass p-8 mb-6">
+            <h1 className="text-4xl font-bold mb-2">${template.icon} ${pageBuilderName}</h1>
+            <p className="text-gray-200">${pageBuilderDescription || 'Custom page built with BottyOtty Page Builder'}</p>
+          </div>
+
+          <div className="glass p-8">
+            <div className="text-center text-gray-300">
+              <p className="text-xl mb-4">🎨 Your custom page is ready!</p>
+              <p className="text-sm">Template: <strong>${template.name}</strong></p>
+              <p className="text-sm">Features: <strong>${enabledFeatures.join(', ') || 'none'}</strong></p>
+              <div className="mt-8 p-6 glass-element rounded-lg">
+                <p className="text-lg mb-4">Start building your content here!</p>
+                <p className="text-sm text-gray-400">This is a basic template. You can now customize the HTML, add your components, and integrate with your backend.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>`;
+
+          // Create download
+          const blob = new Blob([htmlContent], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = \`\${pageBuilderName.replace(/\\s+/g, ' ')} v18.html\`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          alert(\`✅ Page "\${pageBuilderName}" created successfully!\\n\\nThe HTML file has been downloaded. You can now customize it further or add it to your navigation.\`);
+
+          // Reset form
+          setPageBuilderName('');
+          setPageBuilderDescription('');
+          setSelectedFeatures({
+            taskLists: false,
+            charts: false,
+            forms: false,
+            calendar: false,
+            notes: false,
+            fileUpload: false,
+            search: false,
+            filters: false
+          });
+        };
+
         // Sidebar toggle effect
         useEffect(() => {
           const sidebar = document.getElementById('sidebarNav');
@@ -2999,6 +3188,13 @@
                     title="Backup and restore data"
                   >
                     💾 Backup Data
+                  </button>
+                  <button
+                    onClick={() => setShowPageBuilder(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-lg font-bold transition-all shadow-lg"
+                    title="Build new pages from templates"
+                  >
+                    🎨 Page Builder
                   </button>
                   <button
                     onClick={saveToAPI}
@@ -8363,6 +8559,166 @@ ${officeInfo.notes}
                       className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
                     >
                       Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Page Builder Modal */}
+            {showPageBuilder && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                onClick={() => setShowPageBuilder(false)}
+              >
+                <div
+                  className="glass rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-white">🎨 Page Template Builder</h2>
+                    <button
+                      onClick={() => setShowPageBuilder(false)}
+                      className="text-white hover:text-red-400 text-2xl font-bold"
+                    >
+                      ✖
+                    </button>
+                  </div>
+
+                  <p className="text-gray-300 mb-6">
+                    Create new pages from templates without writing code! Select a template, choose features, and download your custom page.
+                  </p>
+
+                  {/* Page Info */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-4">📝 Page Information</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-white font-medium mb-2">Page Name *</label>
+                        <input
+                          type="text"
+                          value={pageBuilderName}
+                          onChange={(e) => setPageBuilderName(e.target.value)}
+                          className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-gray-400"
+                          placeholder="e.g., Project Tracker"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-white font-medium mb-2">Description (Optional)</label>
+                        <input
+                          type="text"
+                          value={pageBuilderDescription}
+                          onChange={(e) => setPageBuilderDescription(e.target.value)}
+                          className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-gray-400"
+                          placeholder="Brief description of what this page does"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Template Selection */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-4">📐 Choose Template</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Object.entries(pageTemplates).map(([key, template]) => (
+                        <button
+                          key={key}
+                          onClick={() => setSelectedTemplate(key)}
+                          className={\`p-6 rounded-lg border-2 transition-all text-left \${
+                            selectedTemplate === key
+                              ? 'bg-purple-600 bg-opacity-40 border-purple-400'
+                              : 'bg-white bg-opacity-5 border-white border-opacity-20 hover:bg-opacity-10'
+                          }\`}
+                        >
+                          <div className="text-4xl mb-3">{template.icon}</div>
+                          <h4 className="text-white font-bold mb-2">{template.name}</h4>
+                          <p className="text-gray-300 text-sm mb-3">{template.description}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {template.features.map(feat => (
+                              <span key={feat} className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">
+                                {feat}
+                              </span>
+                            ))}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Feature Selection */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-4">🧩 Select Features</h3>
+                    <p className="text-gray-300 text-sm mb-4">Choose which features to include in your page</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Object.entries(selectedFeatures).map(([feature, enabled]) => (
+                        <button
+                          key={feature}
+                          onClick={() => toggleFeature(feature)}
+                          className={\`p-4 rounded-lg border-2 transition-all \${
+                            enabled
+                              ? 'bg-green-600 bg-opacity-40 border-green-400'
+                              : 'bg-white bg-opacity-5 border-white border-opacity-20 hover:bg-opacity-10'
+                          }\`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white font-medium capitalize">
+                              {feature.replace(/([A-Z])/g, ' $1').trim()}
+                            </span>
+                            <span className="text-2xl">
+                              {enabled ? '✅' : '⬜'}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="glass-element rounded-lg p-6 mb-6 border-2 border-blue-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-4">👁️ Preview</h3>
+                    <div className="bg-white bg-opacity-5 p-6 rounded-lg">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-4xl">{pageTemplates[selectedTemplate].icon}</span>
+                        <div>
+                          <h4 className="text-white font-bold text-lg">
+                            {pageBuilderName || 'Your Page Name'}
+                          </h4>
+                          <p className="text-gray-300 text-sm">
+                            {pageBuilderDescription || 'Page description will appear here'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="border-t border-white border-opacity-20 pt-4">
+                        <p className="text-gray-300 text-sm mb-2">
+                          <strong>Template:</strong> {pageTemplates[selectedTemplate].name}
+                        </p>
+                        <p className="text-gray-300 text-sm mb-2">
+                          <strong>Selected Features:</strong>{' '}
+                          {Object.entries(selectedFeatures)
+                            .filter(([_, enabled]) => enabled)
+                            .map(([feature, _]) => feature)
+                            .join(', ') || 'None selected'}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          <strong>File Name:</strong> {pageBuilderName.replace(/\s+/g, ' ') || 'Page Name'} v18.html
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowPageBuilder(false)}
+                      className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={generatePage}
+                      className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-bold transition-all shadow-lg"
+                    >
+                      🎨 Generate & Download Page
                     </button>
                   </div>
                 </div>
