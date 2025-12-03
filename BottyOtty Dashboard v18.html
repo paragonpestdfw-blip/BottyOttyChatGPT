@@ -672,6 +672,243 @@
       }
 
       /* ========================================
+         📝 STICKY NOTES
+         ======================================== */
+
+      /* Floating button */
+      .sticky-notes-toggle {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sticky-notes-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+      }
+
+      /* Slide-out panel */
+      .sticky-notes-panel {
+        position: fixed;
+        top: 0;
+        right: -450px;
+        width: 400px;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: -5px 0 30px rgba(0, 0, 0, 0.3);
+        transition: right 0.3s ease;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sticky-notes-panel.open {
+        right: 0;
+      }
+
+      /* Panel header */
+      .sticky-notes-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sticky-notes-header h2 {
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .sticky-notes-close {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 20px;
+        transition: all 0.2s;
+      }
+
+      .sticky-notes-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+      }
+
+      /* Notes container */
+      .sticky-notes-container {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        position: relative;
+        min-height: 600px;
+      }
+
+      /* Individual sticky note */
+      .sticky-note {
+        position: absolute;
+        width: 200px;
+        min-height: 150px;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        cursor: move;
+        transition: box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sticky-note:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      }
+
+      .sticky-note.dragging {
+        opacity: 0.8;
+        z-index: 1000;
+      }
+
+      /* Note colors */
+      .sticky-note.yellow {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #333;
+      }
+
+      .sticky-note.pink {
+        background: linear-gradient(135deg, #ff6b9d 0%, #ffc3d7 100%);
+        color: #fff;
+      }
+
+      .sticky-note.blue {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: #fff;
+      }
+
+      .sticky-note.green {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: #333;
+      }
+
+      .sticky-note.purple {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+      }
+
+      .sticky-note.orange {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: #333;
+      }
+
+      /* Note header */
+      .sticky-note-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .sticky-note-drag-handle {
+        cursor: grab;
+        font-size: 16px;
+        opacity: 0.6;
+      }
+
+      .sticky-note-drag-handle:active {
+        cursor: grabbing;
+      }
+
+      .sticky-note-delete {
+        background: rgba(0, 0, 0, 0.2);
+        border: none;
+        color: inherit;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .sticky-note-delete:hover {
+        background: rgba(255, 0, 0, 0.6);
+        color: white;
+        transform: scale(1.1);
+      }
+
+      /* Note content */
+      .sticky-note-content {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        resize: none;
+        font-size: 14px;
+        line-height: 1.4;
+        color: inherit;
+        font-family: inherit;
+      }
+
+      .sticky-note-content::placeholder {
+        opacity: 0.5;
+      }
+
+      /* Note timestamp */
+      .sticky-note-timestamp {
+        font-size: 10px;
+        opacity: 0.6;
+        text-align: right;
+      }
+
+      /* Add note button */
+      .sticky-notes-add {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .sticky-notes-add button {
+        flex: 1;
+        min-width: 80px;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        transition: all 0.2s;
+      }
+
+      .sticky-notes-add button:hover {
+        transform: scale(1.05);
+      }
+
+      /* ========================================
          🧭 SIDEBAR NAVIGATION
          ======================================== */
 
@@ -908,6 +1145,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Sticky Notes Toggle Button (rendered by React) -->
+    <div id="sticky-notes-root"></div>
 
     <!-- Customization Toggle Button -->
     <button id="customizeToggleBtn" onclick="toggleCustomizationPanel()">
@@ -10507,9 +10747,210 @@
         );
       }
 
+      // Sticky Notes Component
+      function StickyNotes() {
+        const [isOpen, setIsOpen] = useState(false);
+        const [notes, setNotes] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-sticky-notes');
+          return saved ? JSON.parse(saved) : [];
+        });
+        const [draggedNote, setDraggedNote] = useState(null);
+        const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+        const colors = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange'];
+
+        // Save notes to localStorage whenever they change
+        useEffect(() => {
+          localStorage.setItem('bottyotty-sticky-notes', JSON.stringify(notes));
+        }, [notes]);
+
+        // Add new note
+        const addNote = (color) => {
+          const newNote = {
+            id: Date.now(),
+            content: '',
+            color: color,
+            position: { x: 20 + (notes.length * 20) % 300, y: 20 + (notes.length * 20) % 400 },
+            createdAt: new Date().toISOString()
+          };
+          setNotes([...notes, newNote]);
+        };
+
+        // Delete note
+        const deleteNote = (id) => {
+          setNotes(notes.filter(note => note.id !== id));
+        };
+
+        // Update note content
+        const updateNote = (id, content) => {
+          setNotes(notes.map(note =>
+            note.id === id ? { ...note, content, updatedAt: new Date().toISOString() } : note
+          ));
+        };
+
+        // Start dragging
+        const handleMouseDown = (e, note) => {
+          if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+
+          setDraggedNote(note);
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+          });
+        };
+
+        // Handle drag
+        const handleMouseMove = (e) => {
+          if (!draggedNote) return;
+
+          const container = document.querySelector('.sticky-notes-container');
+          if (!container) return;
+
+          const containerRect = container.getBoundingClientRect();
+          const newX = e.clientX - containerRect.left - dragOffset.x;
+          const newY = e.clientY - containerRect.top - dragOffset.y;
+
+          setNotes(notes.map(note =>
+            note.id === draggedNote.id
+              ? { ...note, position: { x: Math.max(0, newX), y: Math.max(0, newY) } }
+              : note
+          ));
+        };
+
+        // End dragging
+        const handleMouseUp = () => {
+          setDraggedNote(null);
+        };
+
+        // Keyboard shortcuts
+        useEffect(() => {
+          const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+              setIsOpen(false);
+            }
+          };
+
+          document.addEventListener('keydown', handleKeyDown);
+          return () => document.removeEventListener('keydown', handleKeyDown);
+        }, [isOpen]);
+
+        // Add mouse event listeners for dragging
+        useEffect(() => {
+          if (draggedNote) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+          }
+        }, [draggedNote, dragOffset, notes]);
+
+        return (
+          <>
+            {/* Floating Toggle Button */}
+            <button
+              className="sticky-notes-toggle"
+              onClick={() => setIsOpen(!isOpen)}
+              title="Open Sticky Notes"
+            >
+              📝
+            </button>
+
+            {/* Slide-out Panel */}
+            <div className={`sticky-notes-panel ${isOpen ? 'open' : ''}`}>
+              {/* Header */}
+              <div className="sticky-notes-header">
+                <h2>📝 Personal Notes</h2>
+                <button
+                  className="sticky-notes-close"
+                  onClick={() => setIsOpen(false)}
+                  title="Close"
+                >
+                  ✖
+                </button>
+              </div>
+
+              {/* Notes Container */}
+              <div className="sticky-notes-container">
+                {notes.map(note => (
+                  <div
+                    key={note.id}
+                    className={`sticky-note ${note.color} ${draggedNote?.id === note.id ? 'dragging' : ''}`}
+                    style={{
+                      left: `${note.position.x}px`,
+                      top: `${note.position.y}px`
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, note)}
+                  >
+                    <div className="sticky-note-header">
+                      <span className="sticky-note-drag-handle">⋮⋮</span>
+                      <button
+                        className="sticky-note-delete"
+                        onClick={() => deleteNote(note.id)}
+                        title="Delete note"
+                      >
+                        ✖
+                      </button>
+                    </div>
+                    <textarea
+                      className="sticky-note-content"
+                      value={note.content}
+                      onChange={(e) => updateNote(note.id, e.target.value)}
+                      placeholder="Type your note here..."
+                      rows={4}
+                    />
+                    <div className="sticky-note-timestamp">
+                      {new Date(note.updatedAt || note.createdAt).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {notes.length === 0 && (
+                  <div style={{ textAlign: 'center', color: '#999', padding: '40px', fontSize: '14px' }}>
+                    Click a color below to add your first note!
+                  </div>
+                )}
+              </div>
+
+              {/* Add Note Buttons */}
+              <div className="sticky-notes-add">
+                {colors.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => addNote(color)}
+                    style={{
+                      background: color === 'yellow' ? '#ffd700' :
+                                 color === 'pink' ? '#ff6b9d' :
+                                 color === 'blue' ? '#4facfe' :
+                                 color === 'green' ? '#43e97b' :
+                                 color === 'purple' ? '#667eea' :
+                                 '#fa709a',
+                      color: color === 'yellow' || color === 'green' || color === 'orange' ? '#333' : '#fff'
+                    }}
+                    title={`Add ${color} note`}
+                  >
+                    + {color.charAt(0).toUpperCase() + color.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      }
+
       // Render
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<TaskManager />);
+
+      // Render Sticky Notes separately
+      const stickyNotesRoot = ReactDOM.createRoot(document.getElementById("sticky-notes-root"));
+      stickyNotesRoot.render(<StickyNotes />);
     </script>
   </body>
 </html>
