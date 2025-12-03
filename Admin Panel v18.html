@@ -2333,6 +2333,40 @@
           });
         };
 
+        // Newsletter Permissions
+        const [showNewsletterPermissions, setShowNewsletterPermissions] = useState(false);
+        const [newsletterUsers, setNewsletterUsers] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-newsletter-users');
+          return saved ? JSON.parse(saved) : [];
+        });
+        const [newNewsletterUser, setNewNewsletterUser] = useState('');
+
+        // Save newsletter users
+        useEffect(() => {
+          localStorage.setItem('bottyotty-newsletter-users', JSON.stringify(newsletterUsers));
+        }, [newsletterUsers]);
+
+        // Add user to newsletter permissions
+        const addNewsletterUser = () => {
+          if (!newNewsletterUser.trim()) {
+            alert('Please enter a username');
+            return;
+          }
+          if (newsletterUsers.some(u => u.name === newNewsletterUser.trim())) {
+            alert('User already has newsletter permissions');
+            return;
+          }
+          setNewsletterUsers([...newsletterUsers, { name: newNewsletterUser.trim(), canEdit: true }]);
+          setNewNewsletterUser('');
+        };
+
+        // Remove user from newsletter permissions
+        const removeNewsletterUser = (userName) => {
+          if (confirm(`Remove newsletter permissions for ${userName}?`)) {
+            setNewsletterUsers(newsletterUsers.filter(u => u.name !== userName));
+          }
+        };
+
         // Sidebar toggle effect
         useEffect(() => {
           const sidebar = document.getElementById('sidebarNav');
@@ -3195,6 +3229,13 @@
                     title="Build new pages from templates"
                   >
                     🎨 Page Builder
+                  </button>
+                  <button
+                    onClick={() => setShowNewsletterPermissions(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white rounded-lg font-bold transition-all shadow-lg"
+                    title="Manage newsletter editing permissions"
+                  >
+                    📰 Newsletter Permissions
                   </button>
                   <button
                     onClick={saveToAPI}
@@ -8719,6 +8760,102 @@ ${officeInfo.notes}
                       className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-bold transition-all shadow-lg"
                     >
                       🎨 Generate & Download Page
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Newsletter Permissions Modal */}
+            {showNewsletterPermissions && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                onClick={() => setShowNewsletterPermissions(false)}
+              >
+                <div
+                  className="glass rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-white">📰 Newsletter Permissions</h2>
+                    <button
+                      onClick={() => setShowNewsletterPermissions(false)}
+                      className="text-white hover:text-red-400 text-2xl font-bold"
+                    >
+                      ✖
+                    </button>
+                  </div>
+
+                  <p className="text-gray-300 mb-6">
+                    Manage who can create, edit, and delete posts in the Newsletter & Company Calendar page.
+                  </p>
+
+                  {/* Add User Section */}
+                  <div className="glass-element rounded-lg p-6 mb-6 border-2 border-cyan-500 border-opacity-30">
+                    <h3 className="text-xl font-bold text-white mb-4">➕ Add User</h3>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={newNewsletterUser}
+                        onChange={(e) => setNewNewsletterUser(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addNewsletterUser()}
+                        className="flex-1 px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-gray-400"
+                        placeholder="Enter username"
+                      />
+                      <button
+                        onClick={addNewsletterUser}
+                        className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        ➕ Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Current Users List */}
+                  <div className="glass-element rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-4">👥 Users with Editing Permissions</h3>
+                    {newsletterUsers.length === 0 ? (
+                      <p className="text-gray-400 text-center py-4">No users have been granted permissions yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {newsletterUsers.map(user => (
+                          <div key={user.name} className="bg-white bg-opacity-10 p-4 rounded-lg flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">👤</span>
+                              <div>
+                                <p className="text-white font-bold">{user.name}</p>
+                                <p className="text-gray-400 text-sm">Can create, edit, and delete posts</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeNewsletterUser(user.name)}
+                              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all"
+                            >
+                              🗑️ Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="glass-element rounded-lg p-6 mb-6 bg-blue-600 bg-opacity-20 border-2 border-blue-500 border-opacity-40">
+                    <h3 className="text-lg font-bold text-white mb-2">ℹ️ How It Works</h3>
+                    <ul className="text-gray-300 text-sm space-y-2 list-disc list-inside">
+                      <li>Users listed here can create, edit, and delete newsletter posts</li>
+                      <li>Users must enter their exact username in the Newsletter page settings</li>
+                      <li>Users not listed here can only view posts (read-only access)</li>
+                      <li>Changes take effect immediately on the Newsletter page</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowNewsletterPermissions(false)}
+                      className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                    >
+                      Close
                     </button>
                   </div>
                 </div>
