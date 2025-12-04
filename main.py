@@ -2043,6 +2043,189 @@ async def alert(
 
 
 # ============================================================
+# CALENDAR DISCORD INTEGRATION
+# ============================================================
+
+# Calendar Event Modal
+class CalendarEventModal(ui.Modal, title="📅 Add Calendar Event"):
+    title_input = ui.TextInput(label="Event Title", required=True)
+    date = ui.TextInput(
+        label="Date",
+        placeholder="YYYY-MM-DD",
+        required=True
+    )
+    event_type = ui.TextInput(
+        label="Event Type",
+        placeholder="birthday, meeting, training, holiday, custom, etc.",
+        required=True
+    )
+    description = ui.TextInput(
+        label="Description (optional)",
+        style=discord.TextStyle.paragraph,
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Parse date
+        try:
+            date_parts = self.date.value.split('-')
+            year, month, day = int(date_parts[0]), int(date_parts[1]), int(date_parts[2])
+        except:
+            await interaction.response.send_message("❌ Invalid date format. Use YYYY-MM-DD", ephemeral=True)
+            return
+
+        # Save to database
+        task_number = add_task(
+            title=f"📅 {self.title_input.value}",
+            description=f"Date: {self.date.value}\nType: {self.event_type.value}\n{self.description.value or ''}",
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='calendar-event',
+            category=self.event_type.value,
+            channel_id=interaction.channel_id
+        )
+
+        # Event type emojis
+        type_emoji = {
+            'birthday': '🎂', 'payday': '💰', 'supplyday': '📦',
+            'anniversary': '🎉', 'wedding': '💍', 'officenight': '💻',
+            'gamenight': '🎮', 'companyevent': '🏢', 'holiday': '🎊',
+            'training': '📚', 'meeting': '👥', 'custom': '📌'
+        }.get(self.event_type.value.lower(), '📅')
+
+        embed = discord.Embed(
+            title=f"{type_emoji} {self.title_input.value}",
+            description=self.description.value or "No description",
+            color=0x5865F2,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="Date", value=self.date.value, inline=True)
+        embed.add_field(name="Type", value=self.event_type.value.capitalize(), inline=True)
+        embed.add_field(name="Event ID", value=f"#{task_number}", inline=True)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+
+        await interaction.response.send_message("📅 Calendar event added!", embed=embed)
+
+
+# Calendar Command
+@bot.tree.command(
+    name="calendar",
+    description="View upcoming calendar events or add a new event",
+)
+@app_commands.choices(
+    action=[
+        app_commands.Choice(name="View Upcoming Events", value="view"),
+        app_commands.Choice(name="Add New Event", value="add"),
+        app_commands.Choice(name="This Month", value="month"),
+    ]
+)
+async def calendar_cmd(
+    interaction: discord.Interaction,
+    action: app_commands.Choice[str]
+):
+    """Manage calendar events"""
+
+    if action.value == "add":
+        await interaction.response.send_modal(CalendarEventModal())
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        if action.value == "view":
+            # Get upcoming events (next 30 days)
+            today = datetime.now()
+            c.execute('''
+                SELECT id, title, description, created_at, category
+                FROM tasks
+                WHERE task_type = 'calendar-event'
+                ORDER BY created_at ASC
+                LIMIT 20
+            ''')
+            events = c.fetchall()
+
+            if not events:
+                await interaction.followup.send("📅 No upcoming calendar events found.", ephemeral=True)
+                return
+
+            embed = discord.Embed(
+                title="📅 Upcoming Calendar Events",
+                description=f"Next {len(events)} events",
+                color=0x5865F2,
+                timestamp=discord.utils.utcnow()
+            )
+
+            for event in events[:10]:  # Show first 10
+                event_id, title, description, created_at, category = event
+                # Extract date from description
+                date_line = description.split('\n')[0] if description else "Date not specified"
+
+                type_emoji = {
+                    'birthday': '🎂', 'payday': '💰', 'supplyday': '📦',
+                    'anniversary': '🎉', 'wedding': '💍', 'officenight': '💻',
+                    'gamenight': '🎮', 'companyevent': '🏢', 'holiday': '🎊',
+                    'training': '📚', 'meeting': '👥', 'custom': '📌'
+                }.get(category.lower() if category else '', '📅')
+
+                embed.add_field(
+                    name=f"{type_emoji} {title}",
+                    value=f"{date_line}\nID: #{event_id}",
+                    inline=False
+                )
+
+        elif action.value == "month":
+            # Get this month's events
+            today = datetime.now()
+            month_start = today.replace(day=1)
+
+            c.execute('''
+                SELECT id, title, description, category
+                FROM tasks
+                WHERE task_type = 'calendar-event'
+                ORDER BY id ASC
+            ''')
+            events = c.fetchall()
+
+            embed = discord.Embed(
+                title=f"📅 {today.strftime('%B %Y')} Events",
+                description="All events this month",
+                color=0x5865F2,
+                timestamp=discord.utils.utcnow()
+            )
+
+            if not events:
+                embed.description = "No events scheduled this month"
+            else:
+                for event in events[:15]:  # Show first 15
+                    event_id, title, description, category = event
+                    date_line = description.split('\n')[0] if description else "Date not specified"
+
+                    type_emoji = {
+                        'birthday': '🎂', 'payday': '💰', 'training': '📚',
+                        'meeting': '👥', 'holiday': '🎊'
+                    }.get(category.lower() if category else '', '📅')
+
+                    embed.add_field(
+                        name=f"{type_emoji} {title}",
+                        value=date_line,
+                        inline=True
+                    )
+
+        conn.close()
+        embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    except Exception as e:
+        await interaction.followup.send(
+            f"❌ Error loading calendar: {str(e)}",
+            ephemeral=True
+        )
+
+
+# ============================================================
 # REQUEST PANEL MODALS & BUTTON VIEW
 # (inlined from discord_request_buttons.py)
 # ============================================================
