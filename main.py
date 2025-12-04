@@ -2226,6 +2226,135 @@ async def calendar_cmd(
 
 
 # ============================================================
+# POLICY & PROCEDURES SYSTEM
+# ============================================================
+
+# Policy categories and documents
+POLICY_DOCUMENTS = {
+    "safety": {
+        "title": "🦺 Safety Policies",
+        "policies": {
+            "ppe": "**Personal Protective Equipment (PPE)**\n• Safety glasses required at all times\n• Steel-toe boots in field\n• Gloves when handling chemicals\n• Hi-vis vest when working near traffic",
+            "vehicle": "**Vehicle Safety**\n• Pre-trip inspection required\n• No phone use while driving\n• Maintain safe following distance\n• Report damage immediately",
+            "chemical": "**Chemical Safety**\n• Read SDS before use\n• Proper ventilation required\n• Never mix chemicals\n• Dispose per EPA guidelines",
+            "incident": "**Incident Reporting**\n• Report all injuries immediately\n• Complete incident form within 24 hours\n• Take photos of scene\n• Notify supervisor ASAP"
+        }
+    },
+    "hr": {
+        "title": "👥 HR Policies",
+        "policies": {
+            "attendance": "**Attendance Policy**\n• Call out 2+ hours before shift\n• 3 no-call/no-shows = termination\n• Sick time must be approved\n• Tardiness: 3 = written warning",
+            "pto": "**Paid Time Off**\n• Request 2 weeks in advance\n• Blackout dates: holidays, peak season\n• Accrual: 1 day per month after 90 days\n• Max carryover: 40 hours",
+            "conduct": "**Code of Conduct**\n• Professional communication\n• Respectful workplace\n• No harassment/discrimination\n• Customer-first mentality",
+            "dress": "**Dress Code**\n• Company uniform required\n• Clean and professional appearance\n• Closed-toe shoes\n• Company logo visible"
+        }
+    },
+    "operations": {
+        "title": "⚙️ Operations",
+        "policies": {
+            "scheduling": "**Scheduling**\n• Routes assigned day before\n• Check ATS/FR daily\n• Notify office of changes\n• Emergency calls take priority",
+            "customer": "**Customer Service**\n• Professional and courteous\n• Explain services clearly\n• Address concerns promptly\n• Follow up on complaints",
+            "quality": "**Quality Standards**\n• Follow treatment protocols\n• Complete all services\n• Document everything\n• Take before/after photos",
+            "equipment": "**Equipment Care**\n• Clean equipment daily\n• Report malfunctions immediately\n• Proper storage required\n• Annual calibration checks"
+        }
+    },
+    "payroll": {
+        "title": "💰 Payroll & Compensation",
+        "policies": {
+            "timekeeping": "**Timekeeping**\n• Clock in/out via ATS\n• Lunch breaks: 30 min unpaid\n• Overtime pre-approved only\n• Time theft = termination",
+            "payday": "**Pay Schedule**\n• Bi-weekly on Fridays\n• Direct deposit required\n• View paystubs in ATS\n• Questions: contact payroll",
+            "expenses": "**Expense Reimbursement**\n• Submit within 30 days\n• Receipts required over $25\n• Approved expenses only\n• Processed with next payroll",
+            "commission": "**Commission Structure**\n• Sales: 10% of job value\n• Paid month after install\n• Must maintain quality standards\n• Chargebacks for cancellations"
+        }
+    },
+    "tech": {
+        "title": "💻 Technology Use",
+        "policies": {
+            "phone": "**Company Phone**\n• Business use only\n• Keep charged\n• No personal calls on shift\n• Report issues to IT",
+            "software": "**Software Access**\n• ATS: All technicians\n• FR: Office staff only\n• Don't share passwords\n• Report access issues",
+            "data": "**Data Privacy**\n• Customer info confidential\n• No screenshots/photos of data\n• Secure devices\n• HIPAA compliant",
+            "social": "**Social Media**\n• No company complaints\n• Represent professionally\n• Ask before posting company content\n• Report negative reviews"
+        }
+    }
+}
+
+
+# Policy Command
+@bot.tree.command(
+    name="policy",
+    description="Access company policies and procedures",
+)
+@app_commands.choices(
+    category=[
+        app_commands.Choice(name="🦺 Safety Policies", value="safety"),
+        app_commands.Choice(name="👥 HR Policies", value="hr"),
+        app_commands.Choice(name="⚙️ Operations", value="operations"),
+        app_commands.Choice(name="💰 Payroll & Compensation", value="payroll"),
+        app_commands.Choice(name="💻 Technology Use", value="tech"),
+        app_commands.Choice(name="📋 All Policies (Overview)", value="all"),
+    ]
+)
+async def policy_cmd(
+    interaction: discord.Interaction,
+    category: app_commands.Choice[str]
+):
+    """View company policies and procedures"""
+
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        if category.value == "all":
+            # Show overview of all policy categories
+            embed = discord.Embed(
+                title="📚 Company Policies & Procedures",
+                description="Use `/policy` with a specific category to view detailed policies.",
+                color=0x5865F2,
+                timestamp=discord.utils.utcnow()
+            )
+
+            for cat_key, cat_data in POLICY_DOCUMENTS.items():
+                policy_list = "\n".join([f"• {name.capitalize()}" for name in cat_data["policies"].keys()])
+                embed.add_field(
+                    name=cat_data["title"],
+                    value=policy_list,
+                    inline=False
+                )
+
+            embed.set_footer(text="Contact HR for questions about any policy")
+
+        else:
+            # Show specific category policies
+            cat_data = POLICY_DOCUMENTS.get(category.value)
+            if not cat_data:
+                await interaction.followup.send("❌ Policy category not found.", ephemeral=True)
+                return
+
+            embed = discord.Embed(
+                title=cat_data["title"],
+                description=f"Key policies in this category:",
+                color=0x5865F2,
+                timestamp=discord.utils.utcnow()
+            )
+
+            for policy_name, policy_content in cat_data["policies"].items():
+                embed.add_field(
+                    name=policy_name.upper(),
+                    value=policy_content,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Questions? Contact your manager | Requested by {interaction.user.display_name}")
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    except Exception as e:
+        await interaction.followup.send(
+            f"❌ Error loading policy: {str(e)}",
+            ephemeral=True
+        )
+
+
+# ============================================================
 # REQUEST PANEL MODALS & BUTTON VIEW
 # (inlined from discord_request_buttons.py)
 # ============================================================
