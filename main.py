@@ -1541,6 +1541,243 @@ async def logs(
             await interaction.user.send(f"```{chunk}```")
 
 
+@bot.tree.command(
+    name="reports",
+    description="Generate formatted reports with statistics and summaries.",
+)
+@app_commands.describe(
+    report_type="Type of report to generate",
+    mode="Timeframe preset or custom range",
+    start="For custom mode: start date (YYYY-MM-DD)",
+    end="For custom mode: end date (YYYY-MM-DD, optional)",
+)
+@app_commands.choices(
+    report_type=[
+        app_commands.Choice(name="Damages Report", value="damages"),
+        app_commands.Choice(name="Fleet Reporting", value="fleet"),
+        app_commands.Choice(name="Weekly Reservice Summary", value="reservice"),
+        app_commands.Choice(name="Move-Up Summary", value="moveup"),
+        app_commands.Choice(name="Request Statistics", value="requests"),
+    ],
+    mode=[
+        app_commands.Choice(name="Last 7 days", value="last_7"),
+        app_commands.Choice(name="Last 30 days", value="last_30"),
+        app_commands.Choice(name="This Week", value="this_week"),
+        app_commands.Choice(name="This Month", value="this_month"),
+        app_commands.Choice(name="Custom range", value="custom"),
+    ]
+)
+async def reports(
+    interaction: discord.Interaction,
+    report_type: app_commands.Choice[str],
+    mode: app_commands.Choice[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+):
+    """Generate formatted reports with statistics and summaries."""
+
+    mode_value = mode.value if mode is not None else "last_7"
+    now = datetime.utcnow()
+    after_dt: Optional[datetime] = None
+    before_dt: Optional[datetime] = None
+    range_text = ""
+
+    # Parse date range
+    if mode_value == "last_7":
+        after_dt = now - timedelta(days=7)
+        range_text = "Last 7 Days"
+    elif mode_value == "last_30":
+        after_dt = now - timedelta(days=30)
+        range_text = "Last 30 Days"
+    elif mode_value == "this_week":
+        # Start of current week (Monday)
+        after_dt = now - timedelta(days=now.weekday())
+        range_text = "This Week"
+    elif mode_value == "this_month":
+        # Start of current month
+        after_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        range_text = "This Month"
+    else:  # custom
+        if not start:
+            await interaction.response.send_message(
+                "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
+                ephemeral=True,
+            )
+            return
+        after_dt = parse_date_str(start)
+        if after_dt is None:
+            await interaction.response.send_message(
+                "⚠️ Could not parse start date. Use format YYYY-MM-DD.",
+                ephemeral=True,
+            )
+            return
+        if end:
+            before_dt = parse_date_str(end)
+            if before_dt is None:
+                await interaction.response.send_message(
+                    "⚠️ Could not parse end date. Use format YYYY-MM-DD.",
+                    ephemeral=True,
+                )
+                return
+            range_text = f"{after_dt.date()} to {before_dt.date()}"
+        else:
+            range_text = f"Since {after_dt.date()}"
+
+    await interaction.response.defer(ephemeral=True)
+
+    # Generate report based on type
+    report_type_value = report_type.value
+
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        if report_type_value == "damages":
+            # Query damage reports
+            c.execute('''
+                SELECT category, COUNT(*), created_at
+                FROM tasks
+                WHERE task_type = 'incident'
+                AND datetime(created_at) >= datetime(?)
+                AND (? IS NULL OR datetime(created_at) <= datetime(?))
+                GROUP BY category
+            ''', (after_dt.isoformat() if after_dt else None,
+                  before_dt.isoformat() if before_dt else None,
+                  before_dt.isoformat() if before_dt else None))
+
+            results = c.fetchall()
+
+            embed = discord.Embed(
+                title=f"📊 Damages Report - {range_text}",
+                description="Summary of damage incidents",
+                color=0xFF6B6B,
+                timestamp=discord.utils.utcnow()
+            )
+
+            total = sum(r[1] for r in results)
+            embed.add_field(name="Total Incidents", value=f"**{total}**", inline=False)
+
+            for category, count, _ in results:
+                embed.add_field(name=category or "Uncategorized", value=f"{count} incidents", inline=True)
+
+        elif report_type_value == "fleet":
+            # Query fleet/vehicle issues
+            c.execute('''
+                SELECT COUNT(*)
+                FROM tasks
+                WHERE category = 'Vehicle'
+                AND datetime(created_at) >= datetime(?)
+                AND (? IS NULL OR datetime(created_at) <= datetime(?))
+            ''', (after_dt.isoformat() if after_dt else None,
+                  before_dt.isoformat() if before_dt else None,
+                  before_dt.isoformat() if before_dt else None))
+
+            vehicle_count = c.fetchone()[0]
+
+            embed = discord.Embed(
+                title=f"🚗 Fleet Reporting - {range_text}",
+                description="Vehicle issues and maintenance summary",
+                color=0xF7B731,
+                timestamp=discord.utils.utcnow()
+            )
+
+            embed.add_field(name="Total Vehicle Issues", value=f"**{vehicle_count}**", inline=False)
+
+        elif report_type_value == "reservice":
+            # Query reservice reports
+            c.execute('''
+                SELECT COUNT(*)
+                FROM tasks
+                WHERE category = 'Weekly Reserves'
+                AND datetime(created_at) >= datetime(?)
+                AND (? IS NULL OR datetime(created_at) <= datetime(?))
+            ''', (after_dt.isoformat() if after_dt else None,
+                  before_dt.isoformat() if before_dt else None,
+                  before_dt.isoformat() if before_dt else None))
+
+            reserve_count = c.fetchone()[0]
+
+            embed = discord.Embed(
+                title=f"📊 Reservice Summary - {range_text}",
+                description="Weekly reservice reports",
+                color=0x3498DB,
+                timestamp=discord.utils.utcnow()
+            )
+
+            embed.add_field(name="Reports Submitted", value=f"**{reserve_count}**", inline=False)
+
+        elif report_type_value == "moveup":
+            # Query move-ups by category
+            c.execute('''
+                SELECT category, COUNT(*)
+                FROM tasks
+                WHERE task_type = 'move-up'
+                AND datetime(created_at) >= datetime(?)
+                AND (? IS NULL OR datetime(created_at) <= datetime(?))
+                GROUP BY category
+            ''', (after_dt.isoformat() if after_dt else None,
+                  before_dt.isoformat() if before_dt else None,
+                  before_dt.isoformat() if before_dt else None))
+
+            results = c.fetchall()
+
+            embed = discord.Embed(
+                title=f"📈 Move-Up Summary - {range_text}",
+                description="Job prioritization statistics",
+                color=0x00D2FF,
+                timestamp=discord.utils.utcnow()
+            )
+
+            total = sum(r[1] for r in results)
+            embed.add_field(name="Total Move-Ups", value=f"**{total}**", inline=False)
+
+            for category, count in results:
+                emoji = {"Pest": "🪲", "Rodent": "🐀", "Insulation": "💩", "Sales": "🤑", "Termite": "🐜"}.get(category, "📋")
+                embed.add_field(name=f"{emoji} {category}", value=f"{count} jobs", inline=True)
+
+        else:  # requests
+            # Query request statistics
+            c.execute('''
+                SELECT category, COUNT(*)
+                FROM tasks
+                WHERE task_type IN ('form-request', 'office-team', 'management')
+                AND datetime(created_at) >= datetime(?)
+                AND (? IS NULL OR datetime(created_at) <= datetime(?))
+                GROUP BY category
+                ORDER BY COUNT(*) DESC
+                LIMIT 10
+            ''', (after_dt.isoformat() if after_dt else None,
+                  before_dt.isoformat() if before_dt else None,
+                  before_dt.isoformat() if before_dt else None))
+
+            results = c.fetchall()
+
+            embed = discord.Embed(
+                title=f"📋 Request Statistics - {range_text}",
+                description="Top request categories",
+                color=0x5865F2,
+                timestamp=discord.utils.utcnow()
+            )
+
+            total = sum(r[1] for r in results)
+            embed.add_field(name="Total Requests", value=f"**{total}**", inline=False)
+
+            for category, count in results:
+                embed.add_field(name=category or "Other", value=f"{count} requests", inline=True)
+
+        conn.close()
+
+        embed.set_footer(text=f"Generated by {interaction.user.display_name}")
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    except Exception as e:
+        await interaction.followup.send(
+            f"❌ Error generating report: {str(e)}",
+            ephemeral=True
+        )
+
+
 # ============================================================
 # REQUEST PANEL MODALS & BUTTON VIEW
 # (inlined from discord_request_buttons.py)
