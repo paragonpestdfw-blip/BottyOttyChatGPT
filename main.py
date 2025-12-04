@@ -963,6 +963,72 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/admin-config', methods=['POST'])
+def update_admin_config():
+    """
+    Receive configuration updates from Admin Panel
+    Updates the bot's CONFIG dictionary with Discord channels, users, and other settings
+    """
+    try:
+        data = request.get_json() or {}
+
+        # Update Discord configuration if provided
+        if 'discordConfig' in data:
+            discord_config = data['discordConfig']
+
+            # Map discord config to employee CONFIG structure
+            # The admin panel sends: {channels: {name: id}, users: {name: id}, threads: {name: id}}
+            # We need to update CONFIG['employees'] and CONFIG['global_logs']
+
+            # Store discord config for reference (can be used by bot commands)
+            CONFIG['discord_channels'] = discord_config.get('channels', {})
+            CONFIG['discord_users'] = discord_config.get('users', {})
+            CONFIG['discord_threads'] = discord_config.get('threads', {})
+
+        # Update channels configuration
+        if 'channels' in data:
+            CONFIG['channels'] = data['channels']
+
+        # Update users configuration
+        if 'users' in data:
+            CONFIG['users'] = data['users']
+
+        # Update reactions
+        if 'reactions' in data:
+            CONFIG['reactions'] = data['reactions']
+
+        # Update bot messages
+        if 'botConfig' in data and 'messages' in data['botConfig']:
+            CONFIG['bot_messages'] = data['botConfig']['messages']
+
+        # Update categories
+        if 'categories' in data:
+            CONFIG['categories'] = data['categories']
+
+        # Update departments and roles
+        if 'departments' in data:
+            CONFIG['departments'] = data['departments']
+        if 'roles' in data:
+            CONFIG['roles'] = data['roles']
+
+        # Save config to file for persistence across restarts
+        try:
+            with open('bot_config.json', 'w') as f:
+                json.dump(CONFIG, f, indent=2)
+            print("✅ Admin config saved to bot_config.json")
+        except Exception as e:
+            print(f"⚠️ Failed to save config to file: {e}")
+
+        print(f"✅ Admin config updated from Admin Panel")
+        return jsonify({
+            'success': True,
+            'message': 'Configuration updated successfully',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"ERROR in /api/admin-config: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/')
 def home():
     """Root endpoint"""
@@ -989,6 +1055,34 @@ intents.guilds = True
 intents.members = True
 
 bot = commands.Bot(command_prefix='@', intents=intents)
+
+# Load saved config from Admin Panel if it exists
+try:
+    if os.path.exists('bot_config.json'):
+        with open('bot_config.json', 'r') as f:
+            saved_config = json.load(f)
+            # Update CONFIG with saved values
+            if 'discord_channels' in saved_config:
+                CONFIG['discord_channels'] = saved_config['discord_channels']
+            if 'discord_users' in saved_config:
+                CONFIG['discord_users'] = saved_config['discord_users']
+            if 'discord_threads' in saved_config:
+                CONFIG['discord_threads'] = saved_config['discord_threads']
+            if 'channels' in saved_config:
+                CONFIG['channels'] = saved_config['channels']
+            if 'users' in saved_config:
+                CONFIG['users'] = saved_config['users']
+            if 'reactions' in saved_config:
+                CONFIG['reactions'] = saved_config['reactions']
+            if 'categories' in saved_config:
+                CONFIG['categories'] = saved_config['categories']
+            if 'departments' in saved_config:
+                CONFIG['departments'] = saved_config['departments']
+            if 'roles' in saved_config:
+                CONFIG['roles'] = saved_config['roles']
+            print("✅ Loaded configuration from bot_config.json")
+except Exception as e:
+    print(f"⚠️ Could not load bot_config.json: {e}")
 
 # Authorized users who can use 📌 reaction to add tasks (Managers)
 AUTHORIZED_USERS = [
