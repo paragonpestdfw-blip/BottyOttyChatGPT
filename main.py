@@ -2671,6 +2671,179 @@ class TermiteMoveUpModal(ui.Modal, title="🐜 Termite Job Move-Up"):
         await interaction.response.send_message("🐜 Termite move-up added!", embed=embed)
 
 
+# ============================================================
+# MANAGEMENT INFO MODALS
+# ============================================================
+
+class WeeklyReserviceModal(ui.Modal, title="📊 Weekly Reservice Report"):
+    week_of = ui.TextInput(label="Week Of", placeholder="e.g., Dec 4-10, 2025", required=True)
+    total_reserves = ui.TextInput(label="Total Reserves This Week", placeholder="Number", required=True)
+    resolved = ui.TextInput(label="Resolved", placeholder="Number", required=True)
+    pending = ui.TextInput(label="Still Pending", placeholder="Number", required=True)
+    notes = ui.TextInput(label="Notes/Trends", style=discord.TextStyle.paragraph, placeholder="Any patterns, issues, wins?", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Weekly Reserves Report: {self.week_of.value}"
+        description = f"Week: {self.week_of.value}\nTotal: {self.total_reserves.value}\nResolved: {self.resolved.value}\nPending: {self.pending.value}"
+        if self.notes.value:
+            description += f"\nNotes: {self.notes.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='management',
+            category='Weekly Reserves',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"📊 Weekly Reserves #{task_number}", color=0x3498DB)
+        embed.add_field(name="Week", value=self.week_of.value, inline=True)
+        embed.add_field(name="Total", value=self.total_reserves.value, inline=True)
+        embed.add_field(name="Resolved", value=self.resolved.value, inline=True)
+        embed.add_field(name="Pending", value=self.pending.value, inline=True)
+        if self.notes.value:
+            embed.add_field(name="Notes", value=self.notes.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("📊 Weekly reservice report submitted!", embed=embed)
+
+
+class ManagerPasswordModal(ui.Modal, title="🔐 Manager Password Entry"):
+    system_name = ui.TextInput(label="System/Platform", placeholder="e.g., FieldRoutes, ATS, Google Admin", required=True)
+    username = ui.TextInput(label="Username/Email", required=True)
+    password = ui.TextInput(label="Password", required=True)
+    notes = ui.TextInput(label="Notes", style=discord.TextStyle.paragraph, placeholder="Access level, usage notes, etc.", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Password: {self.system_name.value}"
+        description = f"System: {self.system_name.value}\nUsername: {self.username.value}\nPassword: {self.password.value}"
+        if self.notes.value:
+            description += f"\nNotes: {self.notes.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='management',
+            category='Passwords',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🔐 Password Stored #{task_number}", color=0xE74C3C)
+        embed.add_field(name="System", value=self.system_name.value, inline=True)
+        embed.add_field(name="Username", value=self.username.value, inline=True)
+        embed.add_field(name="Password", value="||" + self.password.value + "||", inline=False)
+        if self.notes.value:
+            embed.add_field(name="Notes", value=self.notes.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🔐 Password saved securely!", embed=embed, ephemeral=True)
+
+
+class MeetingNotesModal(ui.Modal, title="📝 Meeting Notes"):
+    meeting_title = ui.TextInput(label="Meeting Title", placeholder="e.g., Weekly Manager Sync, Owner Meeting", required=True)
+    date = ui.TextInput(label="Date", placeholder="YYYY-MM-DD", required=True)
+    attendees = ui.TextInput(label="Attendees", placeholder="Who was there?", required=True)
+    notes = ui.TextInput(label="Notes/Action Items", style=discord.TextStyle.paragraph, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Meeting: {self.meeting_title.value} - {self.date.value}"
+        description = f"Meeting: {self.meeting_title.value}\nDate: {self.date.value}\nAttendees: {self.attendees.value}\n\nNotes:\n{self.notes.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='management',
+            category='Meeting Notes',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"📝 Meeting Notes #{task_number}", color=0x9B59B6)
+        embed.add_field(name="Meeting", value=self.meeting_title.value, inline=True)
+        embed.add_field(name="Date", value=self.date.value, inline=True)
+        embed.add_field(name="Attendees", value=self.attendees.value, inline=False)
+        embed.add_field(name="Notes", value=self.notes.value[:1000], inline=False)
+        embed.set_footer(text=f"Recorded by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("📝 Meeting notes saved!", embed=embed)
+
+
+class ManagerDocModal(ui.Modal, title="📄 Manager Document"):
+    doc_title = ui.TextInput(label="Document Title", placeholder="e.g., Q4 Goals, Hiring Process", required=True)
+    category = ui.TextInput(label="Category", placeholder="Process, Policy, Template, Guide, etc.", required=True)
+    link_or_content = ui.TextInput(label="Link or Summary", style=discord.TextStyle.paragraph, placeholder="Google Doc link or brief summary", required=True)
+    tags = ui.TextInput(label="Tags (optional)", placeholder="e.g., hiring, training, sales", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Doc: {self.doc_title.value}"
+        description = f"Title: {self.doc_title.value}\nCategory: {self.category.value}\nContent: {self.link_or_content.value}"
+        if self.tags.value:
+            description += f"\nTags: {self.tags.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='management',
+            category='Manager Docs',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"📄 Manager Doc #{task_number}", color=0x1ABC9C)
+        embed.add_field(name="Title", value=self.doc_title.value, inline=True)
+        embed.add_field(name="Category", value=self.category.value, inline=True)
+        embed.add_field(name="Content/Link", value=self.link_or_content.value, inline=False)
+        if self.tags.value:
+            embed.add_field(name="Tags", value=self.tags.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("📄 Manager document saved!", embed=embed)
+
+
+class ManagerTutorialModal(ui.Modal, title="🎓 Manager Tutorial"):
+    tutorial_title = ui.TextInput(label="Tutorial Title", placeholder="e.g., How to Schedule Routes", required=True)
+    software = ui.TextInput(label="Software/System", placeholder="FieldRoutes, ATS, Discord, etc.", required=True)
+    steps_or_link = ui.TextInput(label="Steps or Link", style=discord.TextStyle.paragraph, placeholder="Brief steps or link to video/doc", required=True)
+    difficulty = ui.TextInput(label="Difficulty Level", placeholder="Beginner / Intermediate / Advanced", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Tutorial: {self.tutorial_title.value}"
+        description = f"Title: {self.tutorial_title.value}\nSoftware: {self.software.value}\n\nSteps:\n{self.steps_or_link.value}"
+        if self.difficulty.value:
+            description += f"\nDifficulty: {self.difficulty.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='management',
+            category='Tutorials',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🎓 Tutorial #{task_number}", color=0xF39C12)
+        embed.add_field(name="Title", value=self.tutorial_title.value, inline=True)
+        embed.add_field(name="Software", value=self.software.value, inline=True)
+        if self.difficulty.value:
+            embed.add_field(name="Difficulty", value=self.difficulty.value, inline=True)
+        embed.add_field(name="Content", value=self.steps_or_link.value[:1000], inline=False)
+        embed.set_footer(text=f"Created by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🎓 Tutorial saved!", embed=embed)
+
+
 class RequestsSelect(ui.Select):
     def __init__(self):
         options = [
