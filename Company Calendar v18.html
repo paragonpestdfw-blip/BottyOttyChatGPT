@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Company Calendar</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+      * {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .calendar-day {
+        min-height: 120px;
+        transition: all 0.2s;
+      }
+
+      .calendar-day:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .event-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+      }
+
+      .event-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin: 2px 0;
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .event-virtual {
+        background: #ff9500;
+        color: white;
+      }
+
+      .event-inperson {
+        background: #5ac8fa;
+        color: white;
+      }
+
+      .event-general {
+        background: #001541;
+        color: white;
+      }
+
+      .event-birthday {
+        background: #ff2d55;
+        color: white;
+      }
+
+      .month-nav-btn {
+        transition: all 0.2s;
+      }
+
+      .month-nav-btn:hover {
+        transform: scale(1.1);
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-slide-in {
+        animation: slideIn 0.3s ease-out;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // Event type configurations
+      const EVENT_TYPES = {
+        birthday: { icon: "🎂", label: "Birthday", color: "event-birthday" },
+        payday: { icon: "💰", label: "Pay Day", color: "event-general" },
+        supplyday: { icon: "📦", label: "Supply Day", color: "event-general" },
+        anniversary: { icon: "🎉", label: "Anniversary", color: "event-birthday" },
+        wedding: { icon: "💍", label: "Wedding", color: "event-birthday" },
+        officenight: { icon: "💻", label: "Office Night", color: "event-inperson" },
+        gamenight: { icon: "🎮", label: "Game Night", color: "event-virtual" },
+        companyevent: { icon: "🏢", label: "Company Event", color: "event-general" },
+        holiday: { icon: "🎊", label: "Holiday", color: "event-birthday" },
+        training: { icon: "📚", label: "Training", color: "event-inperson" },
+        meeting: { icon: "👥", label: "Meeting", color: "event-virtual" },
+        custom: { icon: "📌", label: "Custom Event", color: "event-general" },
+      };
+
+      const STORAGE_KEY = "bottyotty-calendar-events";
+      const NOTES_KEY = "bottyotty-calendar-notes";
+
+      function CompanyCalendar() {
+        const [currentDate, setCurrentDate] = useState(new Date());
+        const [events, setEvents] = useState(() => {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+          } catch (e) {
+            console.error("Failed to load events:", e);
+            return {};
+          }
+        });
+        const [monthNotes, setMonthNotes] = useState(() => {
+          try {
+            const saved = localStorage.getItem(NOTES_KEY);
+            return saved ? JSON.parse(saved) : {};
+          } catch (e) {
+            console.error("Failed to load notes:", e);
+            return {};
+          }
+        });
+        const [showAddEvent, setShowAddEvent] = useState(false);
+        const [selectedDate, setSelectedDate] = useState(null);
+        const [newEvent, setNewEvent] = useState({
+          title: "",
+          type: "custom",
+          mode: "general",
+        });
+
+        // Save events to localStorage
+        useEffect(() => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+        }, [events]);
+
+        // Save notes to localStorage
+        useEffect(() => {
+          localStorage.setItem(NOTES_KEY, JSON.stringify(monthNotes));
+        }, [monthNotes]);
+
+        const monthKey = `\${currentDate.getFullYear()}-\${currentDate.getMonth()}`;
+        const currentMonthNotes = monthNotes[monthKey] || "";
+
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const monthName = currentDate.toLocaleDateString("en-US", {
+          month: "long",
+        });
+
+        // Get days in month
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+
+        // Generate calendar days
+        const calendarDays = [];
+        for (let i = 0; i < firstDayOfMonth; i++) {
+          calendarDays.push(null);
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+          calendarDays.push(i);
+        }
+
+        const getDateKey = (day) => {
+          return `\${year}-\${month}-\${day}`;
+        };
+
+        const getEventsForDay = (day) => {
+          if (!day) return [];
+          const key = getDateKey(day);
+          return events[key] || [];
+        };
+
+        const addEvent = () => {
+          if (!newEvent.title.trim() || !selectedDate) return;
+
+          const key = getDateKey(selectedDate);
+          const dayEvents = events[key] || [];
+          dayEvents.push({
+            ...newEvent,
+            id: Date.now(),
+            createdAt: new Date().toISOString(),
+          });
+
+          setEvents({ ...events, [key]: dayEvents });
+          setNewEvent({ title: "", type: "custom", mode: "general" });
+          setShowAddEvent(false);
+          setSelectedDate(null);
+        };
+
+        const deleteEvent = (day, eventId) => {
+          const key = getDateKey(day);
+          const dayEvents = events[key] || [];
+          const filtered = dayEvents.filter((e) => e.id !== eventId);
+
+          if (filtered.length === 0) {
+            const newEvents = { ...events };
+            delete newEvents[key];
+            setEvents(newEvents);
+          } else {
+            setEvents({ ...events, [key]: filtered });
+          }
+        };
+
+        const goToPreviousMonth = () => {
+          setCurrentDate(new Date(year, month - 1, 1));
+        };
+
+        const goToNextMonth = () => {
+          setCurrentDate(new Date(year, month + 1, 1));
+        };
+
+        const goToToday = () => {
+          setCurrentDate(new Date());
+        };
+
+        const updateMonthNotes = (notes) => {
+          setMonthNotes({ ...monthNotes, [monthKey]: notes });
+        };
+
+        return (
+          <div className="min-h-screen p-4 md:p-8">
+            {/* Header */}
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/mnt/user-data/uploads/Botty_Otty_Logo.png"
+                    alt="BottyOtty"
+                    className="w-16 h-16 object-contain"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                  />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white mb-1">
+                      📅 Company Calendar
+                    </h1>
+                    <p className="text-gray-200 text-sm">
+                      Birthdays, Events, Pay Days & More
+                    </p>
+                  </div>
+                </div>
+
+                {/* Navigation Links */}
+                <div className="flex gap-2">
+                  <a
+                    href="BottyOtty Dashboard v18.html"
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    🏠 Dashboard
+                  </a>
+                  <a
+                    href="Admin Panel v18.html"
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    ⚙️ Admin
+                  </a>
+                  <a
+                    href="BottyOtty Newsletter v18.html"
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    📰 Newsletter
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Month Navigation */}
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="month-nav-btn px-6 py-3 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg font-bold text-xl"
+                >
+                  ◀
+                </button>
+
+                <div className="text-center">
+                  <h2 className="text-4xl font-bold text-white mb-2">
+                    {monthName} {year}
+                  </h2>
+                  <button
+                    onClick={goToToday}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    📍 Today
+                  </button>
+                </div>
+
+                <button
+                  onClick={goToNextMonth}
+                  className="month-nav-btn px-6 py-3 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg font-bold text-xl"
+                >
+                  ▶
+                </button>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="glass rounded-2xl p-4 mb-6">
+              <div className="flex flex-wrap gap-4 items-center justify-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-orange-500"></div>
+                  <span className="text-white text-sm font-medium">
+                    Virtual
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-blue-400"></div>
+                  <span className="text-white text-sm font-medium">
+                    In-Person
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-blue-900"></div>
+                  <span className="text-white text-sm font-medium">
+                    General
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-pink-600"></div>
+                  <span className="text-white text-sm font-medium">
+                    Special
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="glass rounded-2xl p-6 mb-6 animate-slide-in">
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                  (day) => (
+                    <div
+                      key={day}
+                      className="text-center font-bold text-white text-sm py-2"
+                    >
+                      {day}
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, idx) => {
+                  if (!day) {
+                    return (
+                      <div
+                        key={`empty-\${idx}`}
+                        className="bg-white bg-opacity-5 rounded-lg"
+                      ></div>
+                    );
+                  }
+
+                  const dayEvents = getEventsForDay(day);
+                  const isToday =
+                    day === new Date().getDate() &&
+                    month === new Date().getMonth() &&
+                    year === new Date().getFullYear();
+
+                  return (
+                    <div
+                      key={day}
+                      className={`calendar-day bg-white rounded-lg p-2 \${
+                        isToday ? "ring-4 ring-yellow-400" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className={`font-bold text-lg \${
+                            isToday ? "text-yellow-600" : "text-gray-800"
+                          }`}
+                        >
+                          {day}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedDate(day);
+                            setShowAddEvent(true);
+                          }}
+                          className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-all"
+                          title="Add Event"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Events List */}
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        {dayEvents.map((event) => {
+                          const typeConfig = EVENT_TYPES[event.type];
+                          let colorClass = "event-general";
+                          if (event.mode === "virtual")
+                            colorClass = "event-virtual";
+                          if (event.mode === "inperson")
+                            colorClass = "event-inperson";
+                          if (event.type === "birthday")
+                            colorClass = "event-birthday";
+
+                          return (
+                            <div
+                              key={event.id}
+                              className={`event-badge \${colorClass} cursor-pointer relative group`}
+                              title={event.title}
+                            >
+                              <span className="text-xs">
+                                {typeConfig.icon} {event.title}
+                              </span>
+                              <button
+                                onClick={() => deleteEvent(day, event.id)}
+                                className="absolute right-1 top-0 opacity-0 group-hover:opacity-100 text-white hover:text-red-300 transition-all"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Month Notes */}
+            <div className="glass rounded-2xl p-6 mb-6">
+              <h3 className="text-2xl font-bold text-white mb-4">
+                📝 Notes for {monthName} {year}
+              </h3>
+              <textarea
+                value={currentMonthNotes}
+                onChange={(e) => updateMonthNotes(e.target.value)}
+                placeholder="Add notes, reminders, or important information for this month..."
+                className="w-full px-4 py-3 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none focus:border-opacity-60"
+                rows="5"
+              />
+            </div>
+
+            {/* Add Event Modal */}
+            {showAddEvent && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="glass rounded-2xl p-6 max-w-md w-full animate-slide-in">
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    Add Event for {monthName} {selectedDate}
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Event Title
+                      </label>
+                      <input
+                        type="text"
+                        value={newEvent.title}
+                        onChange={(e) =>
+                          setNewEvent({ ...newEvent, title: e.target.value })
+                        }
+                        placeholder="e.g., John's Birthday, Team Meeting"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Event Type
+                      </label>
+                      <select
+                        value={newEvent.type}
+                        onChange={(e) =>
+                          setNewEvent({ ...newEvent, type: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      >
+                        {Object.entries(EVENT_TYPES).map(([key, config]) => (
+                          <option key={key} value={key} className="glass">
+                            {config.icon} {config.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Mode
+                      </label>
+                      <select
+                        value={newEvent.mode}
+                        onChange={(e) =>
+                          setNewEvent({ ...newEvent, mode: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      >
+                        <option value="general" className="glass">
+                          General
+                        </option>
+                        <option value="virtual" className="glass">
+                          Virtual (Orange)
+                        </option>
+                        <option value="inperson" className="glass">
+                          In-Person (Blue)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={addEvent}
+                        className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        ✅ Add Event
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowAddEvent(false);
+                          setSelectedDate(null);
+                          setNewEvent({
+                            title: "",
+                            type: "custom",
+                            mode: "general",
+                          });
+                        }}
+                        className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<CompanyCalendar />);
+    </script>
+  </body>
+</html>

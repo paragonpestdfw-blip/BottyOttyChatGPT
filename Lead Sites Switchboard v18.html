@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Lead Sites Switchboard</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+      * {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .lead-card {
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .lead-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .status-active {
+        background: #10b981;
+      }
+
+      .status-paused {
+        background: #f59e0b;
+      }
+
+      .status-inactive {
+        background: #ef4444;
+      }
+
+      .pulse-dot {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      const STORAGE_KEY = "bottyotty-lead-sites";
+      const DEFAULT_API_URL = "https://bottyotty-production.up.railway.app";
+
+      function LeadSitesSwitchboard() {
+        const [leadSites, setLeadSites] = useState(() => {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
+          } catch (e) {
+            console.error("Failed to load lead sites:", e);
+            return [];
+          }
+        });
+
+        const [showAddSite, setShowAddSite] = useState(false);
+        const [editingSite, setEditingSite] = useState(null);
+        const [newSite, setNewSite] = useState({
+          name: "",
+          url: "",
+          status: "active",
+          channelId: "",
+          webhookUrl: "",
+          apiKey: "",
+          notes: "",
+        });
+        const [notification, setNotification] = useState(null);
+
+        // Save to localStorage
+        useEffect(() => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(leadSites));
+        }, [leadSites]);
+
+        const showNotification = (message, type = "success") => {
+          setNotification({ message, type });
+          setTimeout(() => setNotification(null), 3000);
+        };
+
+        const addOrUpdateSite = () => {
+          if (!newSite.name.trim()) {
+            showNotification("Please enter a site name", "error");
+            return;
+          }
+
+          if (editingSite) {
+            // Update existing
+            setLeadSites(
+              leadSites.map((site) =>
+                site.id === editingSite.id
+                  ? { ...newSite, id: editingSite.id }
+                  : site
+              )
+            );
+            showNotification("Lead site updated successfully!", "success");
+          } else {
+            // Add new
+            const site = {
+              ...newSite,
+              id: Date.now(),
+              createdAt: new Date().toISOString(),
+            };
+            setLeadSites([...leadSites, site]);
+            showNotification("Lead site added successfully!", "success");
+          }
+
+          resetForm();
+        };
+
+        const deleteSite = (id) => {
+          if (confirm("Delete this lead site?")) {
+            setLeadSites(leadSites.filter((site) => site.id !== id));
+            showNotification("Lead site deleted", "success");
+          }
+        };
+
+        const editSite = (site) => {
+          setEditingSite(site);
+          setNewSite({ ...site });
+          setShowAddSite(true);
+        };
+
+        const resetForm = () => {
+          setNewSite({
+            name: "",
+            url: "",
+            status: "active",
+            channelId: "",
+            webhookUrl: "",
+            apiKey: "",
+            notes: "",
+          });
+          setShowAddSite(false);
+          setEditingSite(null);
+        };
+
+        const testConnection = async (site) => {
+          showNotification("Testing connection...", "info");
+
+          try {
+            // This is a placeholder - implement actual connection test
+            const response = await fetch(`${DEFAULT_API_URL}/api/lead-sites/test`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                siteId: site.id,
+                channelId: site.channelId,
+                webhookUrl: site.webhookUrl,
+              }),
+            });
+
+            if (response.ok) {
+              showNotification("Connection test successful!", "success");
+            } else {
+              showNotification("Connection test failed", "error");
+            }
+          } catch (err) {
+            console.error("Connection test error:", err);
+            showNotification("Connection test failed - check console", "error");
+          }
+        };
+
+        const activeSites = leadSites.filter((s) => s.status === "active");
+        const pausedSites = leadSites.filter((s) => s.status === "paused");
+        const inactiveSites = leadSites.filter((s) => s.status === "inactive");
+
+        return (
+          <div className="min-h-screen p-4 md:p-8">
+            {/* Header */}
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/mnt/user-data/uploads/Botty_Otty_Logo.png"
+                    alt="BottyOtty"
+                    className="w-16 h-16 object-contain"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                  />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white mb-1">
+                      🔗 Lead Sites Switchboard
+                    </h1>
+                    <p className="text-gray-200 text-sm">
+                      Manage lead generation sources and integrations
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <a
+                    href="BottyOtty Dashboard v18.html"
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    🏠 Dashboard
+                  </a>
+                  <a
+                    href="Admin Panel v18.html"
+                    className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg transition-all text-sm font-medium"
+                  >
+                    ⚙️ Admin
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification */}
+            {notification && (
+              <div
+                className={`glass rounded-xl p-4 mb-6 \${
+                  notification.type === "success"
+                    ? "border-green-500"
+                    : notification.type === "error"
+                      ? "border-red-500"
+                      : "border-blue-500"
+                } border-l-4`}
+              >
+                <p className="text-white font-medium">{notification.message}</p>
+              </div>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="glass rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-300 text-sm mb-1">Active Sites</p>
+                    <p className="text-4xl font-bold text-green-400">
+                      {activeSites.length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center pulse-dot">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-300 text-sm mb-1">Paused Sites</p>
+                    <p className="text-4xl font-bold text-yellow-400">
+                      {pausedSites.length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">⏸️</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-300 text-sm mb-1">Total Sites</p>
+                    <p className="text-4xl font-bold text-white">
+                      {leadSites.length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">🔗</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Site Button */}
+            <div className="mb-6">
+              <button
+                onClick={() => setShowAddSite(true)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg"
+              >
+                ➕ Add New Lead Site
+              </button>
+            </div>
+
+            {/* Lead Sites Grid */}
+            {leadSites.length === 0 ? (
+              <div className="glass rounded-2xl p-12 text-center">
+                <div className="text-6xl mb-4">🔗</div>
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  No Lead Sites Yet
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  Get started by adding your first lead generation source
+                </p>
+                <button
+                  onClick={() => setShowAddSite(true)}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-all"
+                >
+                  ➕ Add Lead Site
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {leadSites.map((site) => (
+                  <div
+                    key={site.id}
+                    className="glass rounded-xl p-6 lead-card"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-xl font-bold text-white">
+                            {site.name}
+                          </h3>
+                          <div
+                            className={`w-3 h-3 rounded-full status-\${site.status}`}
+                            title={site.status}
+                          ></div>
+                        </div>
+                        {site.url && (
+                          <a
+                            href={site.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-300 hover:text-blue-200 text-sm break-all"
+                          >
+                            {site.url}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {site.notes && (
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">
+                        {site.notes}
+                      </p>
+                    )}
+
+                    <div className="space-y-2 mb-4 text-sm">
+                      {site.channelId && (
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <span className="text-purple-400">📺</span>
+                          <span>Channel: {site.channelId}</span>
+                        </div>
+                      )}
+                      {site.webhookUrl && (
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <span className="text-green-400">🔗</span>
+                          <span>Webhook configured</span>
+                        </div>
+                      )}
+                      {site.apiKey && (
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <span className="text-yellow-400">🔑</span>
+                          <span>API key set</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => testConnection(site)}
+                        className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                      >
+                        🧪 Test
+                      </button>
+                      <button
+                        onClick={() => editSite(site)}
+                        className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => deleteSite(site.id)}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add/Edit Site Modal */}
+            {showAddSite && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full my-8">
+                  <h3 className="text-2xl font-bold text-white mb-6">
+                    {editingSite ? "Edit Lead Site" : "Add New Lead Site"}
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Site Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newSite.name}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, name: e.target.value })
+                        }
+                        placeholder="e.g., Google Ads, Facebook Leads, Website Form"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Website URL
+                      </label>
+                      <input
+                        type="url"
+                        value={newSite.url}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, url: e.target.value })
+                        }
+                        placeholder="https://example.com"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Status
+                      </label>
+                      <select
+                        value={newSite.status}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, status: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      >
+                        <option value="active" className="glass">
+                          Active
+                        </option>
+                        <option value="paused" className="glass">
+                          Paused
+                        </option>
+                        <option value="inactive" className="glass">
+                          Inactive
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Discord Channel ID
+                      </label>
+                      <input
+                        type="text"
+                        value={newSite.channelId}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, channelId: e.target.value })
+                        }
+                        placeholder="Discord channel ID for lead notifications"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Webhook URL
+                      </label>
+                      <input
+                        type="url"
+                        value={newSite.webhookUrl}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, webhookUrl: e.target.value })
+                        }
+                        placeholder="Discord webhook or integration URL"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        API Key
+                      </label>
+                      <input
+                        type="password"
+                        value={newSite.apiKey}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, apiKey: e.target.value })
+                        }
+                        placeholder="API key for this lead source"
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Notes
+                      </label>
+                      <textarea
+                        value={newSite.notes}
+                        onChange={(e) =>
+                          setNewSite({ ...newSite, notes: e.target.value })
+                        }
+                        placeholder="Additional notes, configuration details, etc."
+                        className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-60 rounded-lg border border-white border-opacity-30 focus:outline-none"
+                        rows="3"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <button
+                        onClick={addOrUpdateSite}
+                        className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        {editingSite ? "💾 Update Site" : "➕ Add Site"}
+                      </button>
+                      <button
+                        onClick={resetForm}
+                        className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Info Panel */}
+            <div className="glass rounded-2xl p-6 mt-6">
+              <h3 className="text-xl font-bold text-white mb-4">
+                💡 Discord Integration Setup
+              </h3>
+              <div className="space-y-3 text-gray-200 text-sm">
+                <p>
+                  <strong className="text-white">
+                    1. Get Discord Channel ID:
+                  </strong>{" "}
+                  Enable Developer Mode in Discord (Settings → Advanced), then
+                  right-click a channel and select "Copy ID"
+                </p>
+                <p>
+                  <strong className="text-white">2. Set up Webhook:</strong>{" "}
+                  Channel Settings → Integrations → Webhooks → Create Webhook,
+                  copy the URL
+                </p>
+                <p>
+                  <strong className="text-white">3. Test Connection:</strong>{" "}
+                  Click the "Test" button on any site card to verify the
+                  integration works
+                </p>
+                <p>
+                  <strong className="text-white">
+                    4. Backend Integration:
+                  </strong>{" "}
+                  Add the lead sites API endpoints to main.py (see
+                  documentation)
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<LeadSitesSwitchboard />);
+    </script>
+  </body>
+</html>

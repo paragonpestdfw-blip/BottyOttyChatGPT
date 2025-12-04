@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Pest Move-Up List</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+      * { font-family: "Inter", sans-serif; }
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+      .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+      .draggable { cursor: grab; }
+      .draggable:active { cursor: grabbing; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+      const STORAGE_KEY = "bottyotty-pest-moveup";
+
+      function PestMoveUpList() {
+        const [customers, setCustomers] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+        const [showAdd, setShowAdd] = useState(false);
+        const [form, setForm] = useState({ name: "", phone: "", address: "", reason: "cancellation", priority: "medium", notes: "", dateAdded: new Date().toISOString().split('T')[0] });
+
+        useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(customers)); }, [customers]);
+
+        const addCustomer = () => {
+          if (!form.name || !form.phone) return alert("Name and phone required");
+          setCustomers([...customers, { ...form, id: Date.now(), contacted: false }]);
+          setForm({ name: "", phone: "", address: "", reason: "cancellation", priority: "medium", notes: "", dateAdded: new Date().toISOString().split('T')[0] });
+          setShowAdd(false);
+        };
+
+        const toggleContacted = (id) => {
+          setCustomers(customers.map(c => c.id === id ? { ...c, contacted: !c.contacted } : c));
+        };
+
+        const deleteCustomer = (id) => {
+          if (confirm("Remove from move-up list?")) setCustomers(customers.filter(c => c.id !== id));
+        };
+
+        const moveUp = (id) => {
+          const idx = customers.findIndex(c => c.id === id);
+          if (idx > 0) {
+            const newList = [...customers];
+            [newList[idx - 1], newList[idx]] = [newList[idx], newList[idx - 1]];
+            setCustomers(newList);
+          }
+        };
+
+        const moveDown = (id) => {
+          const idx = customers.findIndex(c => c.id === id);
+          if (idx < customers.length - 1) {
+            const newList = [...customers];
+            [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
+            setCustomers(newList);
+          }
+        };
+
+        const highPriority = customers.filter(c => c.priority === 'high' && !c.contacted);
+        const contacted = customers.filter(c => c.contacted).length;
+
+        return (
+          <div className="min-h-screen p-8">
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="/mnt/user-data/uploads/Botty_Otty_Logo.png" alt="Logo" className="w-16 h-16" onError={e => e.target.style.display='none'} />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white">🐛 Pest Move-Up List</h1>
+                    <p className="text-gray-200 text-sm">Prioritized list for scheduling openings</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href="BottyOtty Dashboard v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">🏠 Dashboard</a>
+                  <a href="Admin Panel v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">⚙️ Admin</a>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Total Customers</p>
+                <p className="text-5xl font-bold text-white">{customers.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">High Priority</p>
+                <p className="text-5xl font-bold text-red-400">{highPriority.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Contacted</p>
+                <p className="text-5xl font-bold text-green-400">{contacted}</p>
+              </div>
+            </div>
+
+            <button onClick={() => setShowAdd(true)} className="w-full mb-6 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg">
+              ➕ Add to Move-Up List
+            </button>
+
+            <div className="glass rounded-2xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-4">Move-Up Queue</h2>
+              <div className="space-y-3">
+                {customers.map((customer, idx) => (
+                  <div key={customer.id} className={\`p-4 rounded-lg \${customer.contacted ? 'bg-green-900 bg-opacity-30' : customer.priority === 'high' ? 'bg-red-900 bg-opacity-40' : customer.priority === 'medium' ? 'bg-yellow-900 bg-opacity-30' : 'bg-blue-900 bg-opacity-30'} draggable\`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-white font-bold text-lg">#{idx + 1}</span>
+                          <h3 className="text-white font-bold">{customer.name}</h3>
+                          <span className={\`px-2 py-1 rounded text-xs font-bold \${customer.priority === 'high' ? 'bg-red-500' : customer.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'} text-white\`}>
+                            {customer.priority.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-gray-200 text-sm">📞 {customer.phone}</p>
+                        {customer.address && <p className="text-gray-300 text-sm">📍 {customer.address}</p>}
+                        <p className="text-gray-400 text-xs mt-1">Reason: {customer.reason} | Added: {customer.dateAdded}</p>
+                        {customer.notes && <p className="text-gray-300 text-sm mt-2">{customer.notes}</p>}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => moveUp(customer.id)} disabled={idx === 0} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white rounded text-xs">▲</button>
+                        <button onClick={() => moveDown(customer.id)} disabled={idx === customers.length - 1} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white rounded text-xs">▼</button>
+                        <button onClick={() => toggleContacted(customer.id)} className={\`px-2 py-1 \${customer.contacted ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded text-xs\`}>
+                          {customer.contacted ? '↩' : '✓'}
+                        </button>
+                        <button onClick={() => deleteCustomer(customer.id)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs">×</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {showAdd && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full">
+                  <h3 className="text-2xl font-bold text-white mb-6">Add to Move-Up List</h3>
+                  <div className="space-y-4">
+                    <input placeholder="Customer Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Phone Number *" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <select value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="cancellation">Cancellation</option>
+                      <option value="reschedule">Reschedule</option>
+                      <option value="urgent">Urgent Request</option>
+                      <option value="callback">Call Back</option>
+                    </select>
+                    <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+                    <textarea placeholder="Notes" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="3" />
+                    <div className="flex gap-2">
+                      <button onClick={addCustomer} className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold">Add Customer</button>
+                      <button onClick={() => setShowAdd(false)} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<PestMoveUpList />);
+    </script>
+  </body>
+</html>
