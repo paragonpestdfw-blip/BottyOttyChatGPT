@@ -2077,15 +2077,26 @@ class CampfireEscalationModal(ui.Modal, title="Escalate to Campfire"):
 class RequestsSelect(ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Print Materials"),
-            discord.SelectOption(label="Safety Gear"),
-            discord.SelectOption(label="Vehicle Issue"),
-            discord.SelectOption(label="Route Change Request"),
-            discord.SelectOption(label="Extra Pest Route"),
-            discord.SelectOption(label="Extra Insulation Route"),
-            discord.SelectOption(label="Meeting Request"),
-            discord.SelectOption(label="Special Inventory"),
-            discord.SelectOption(label="Other Request"),
+            # Extra Routes
+            discord.SelectOption(label="Extra Pest Route", emoji="🪲"),
+            discord.SelectOption(label="Extra Rodent Route", emoji="🐀"),
+            discord.SelectOption(label="Extra Insulation Route", emoji="💩"),
+            discord.SelectOption(label="Extra Termite Route", emoji="🐜"),
+            discord.SelectOption(label="Extra Sales Route", emoji="🤑"),
+            discord.SelectOption(label="Extra Office Day", emoji="🏢"),
+            # General Requests
+            discord.SelectOption(label="Print Materials", emoji="🖨️"),
+            discord.SelectOption(label="Safety Gear", emoji="🦺"),
+            discord.SelectOption(label="Special Inventory", emoji="📦"),
+            # Vehicle
+            discord.SelectOption(label="Vehicle Issue", emoji="🚗"),
+            discord.SelectOption(label="Vehicle Maintenance", emoji="🔧"),
+            # Other
+            discord.SelectOption(label="Meeting Request", emoji="👥"),
+            discord.SelectOption(label="Manager - Doc Edits", emoji="📝"),
+            discord.SelectOption(label="Manager - Code Requests", emoji="💻"),
+            discord.SelectOption(label="Route Change Request", emoji="🗺️"),
+            discord.SelectOption(label="Other Request", emoji="❓"),
         ]
         super().__init__(
             placeholder="Requests",
