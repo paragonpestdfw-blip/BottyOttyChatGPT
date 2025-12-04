@@ -2355,6 +2355,137 @@ async def policy_cmd(
 
 
 # ============================================================
+# KNOWLEDGE BASE & RESOURCES
+# ============================================================
+
+# Knowledge base articles organized by topic
+KNOWLEDGE_BASE = {
+    "software": {
+        "title": "💻 Software & Tools",
+        "articles": {
+            "ats": "**ATS (Appointment Tracking System)**\n• Login: ats.company.com\n• Clock in/out from mobile app\n• View daily schedule & customer info\n• Submit time corrections via /alert\n• Contact IT if login fails",
+            "fieldroutes": "**FieldRoutes**\n• Office staff only\n• Scheduling and routing tool\n• Customer database\n• Service history tracking\n• Training required for access",
+            "discord": "**Discord Bot Commands**\n• /alert - Send updates to management\n• /calendar - View company events\n• /logs - View historical logs\n• /reports - Generate statistics\n• /policy - Access company policies",
+            "mobile": "**Mobile Apps**\n• ATS mobile for field work\n• Discord for team communication\n• Google Drive for documents\n• Photos app for evidence\n• Weather app for daily checks"
+        }
+    },
+    "training": {
+        "title": "📚 Training & How-To Guides",
+        "articles": {
+            "newtech": "**New Tech Onboarding**\nWeek 1:\n• Shadow experienced tech\n• Learn safety protocols\n• Equipment familiarization\n• Customer service basics\n\nWeek 2-4:\n• Solo routes with support\n• Product knowledge training\n• Sales techniques\n• Quality standards certification",
+            "sales": "**Sales Best Practices**\n• Identify pest evidence\n• Explain treatment benefits\n• Address objections professionally\n• Follow up on quotes\n• Document in ATS immediately",
+            "treatment": "**Treatment Procedures**\n1. Inspect thoroughly\n2. Identify pest species\n3. Select appropriate product\n4. Apply per label instructions\n5. Document treatment\n6. Explain to customer\n7. Schedule follow-up",
+            "customerservice": "**Customer Service Excellence**\n• Arrive on time, call if late\n• Professional appearance\n• Explain services clearly\n• Address concerns immediately\n• Leave service report\n• Ask for reviews"
+        }
+    },
+    "troubleshooting": {
+        "title": "🔧 Common Issues & Solutions",
+        "articles": {
+            "equipment": "**Equipment Problems**\n\n**Sprayer not working:**\n• Check pump prime\n• Inspect hose for kinks\n• Replace nozzle if clogged\n\n**Vehicle issues:**\n• Check fluids before shift\n• Report maintenance needs\n• Keep emergency kit stocked\n\n**Radio problems:**\n• Replace batteries\n• Check for interference\n• Contact office if persists",
+            "software": "**Software Issues**\n\n**Can't clock in:**\n• Check internet connection\n• Clear app cache\n• Restart phone\n• Use backup method\n\n**Route not showing:**\n• Pull down to refresh\n• Log out and back in\n• Contact office if persists\n\n**Missing customer info:**\n• Check notes in ATS\n• Call office for details",
+            "customer": "**Customer Complaints**\n\n**Still seeing pests:**\n• Explain lifecycle & timeline\n• Schedule follow-up visit\n• Document in ATS\n• Notify supervisor\n\n**Treatment concerns:**\n• Provide SDS if requested\n• Explain safety measures\n• Address specific worries\n• Offer alternative if needed",
+            "weather": "**Weather Delays**\n\n**Rain:**\n• Reschedule exterior treatments\n• Focus on interior services\n• Notify affected customers\n• Update ATS schedule\n\n**Extreme heat:**\n• Start early if possible\n• Take frequent breaks\n• Stay hydrated\n• Watch for heat illness"
+        }
+    },
+    "emergency": {
+        "title": "🚨 Emergency Procedures",
+        "articles": {
+            "injury": "**Employee Injury**\n1. Stop work immediately\n2. Provide first aid if trained\n3. Call 911 for serious injuries\n4. Notify supervisor ASAP\n5. Complete incident report\n6. Seek medical attention\n7. Follow workers' comp process",
+            "spill": "**Chemical Spill**\n1. Evacuate area if needed\n2. Contain spill with absorbent\n3. Ventilate area\n4. Clean per SDS instructions\n5. Document incident\n6. Report to supervisor\n7. Dispose properly",
+            "accident": "**Vehicle Accident**\n1. Check for injuries\n2. Call 911 if needed\n3. Move to safe location if able\n4. Exchange information\n5. Take photos (vehicles, scene)\n6. Notify supervisor immediately\n7. File police report\n8. Complete incident form",
+            "customer": "**Customer Emergency**\n1. Assess situation\n2. Call 911 if life-threatening\n3. Provide first aid if trained\n4. Stay with customer\n5. Contact supervisor\n6. Document thoroughly\n7. Follow up as directed"
+        }
+    },
+    "faq": {
+        "title": "❓ Frequently Asked Questions",
+        "articles": {
+            "pay": "**Q: When do I get paid?**\nA: Bi-weekly on Fridays via direct deposit. View paystubs in ATS portal.\n\n**Q: How is commission calculated?**\nA: 10% of job value, paid month after installation, minus cancellations.",
+            "time": "**Q: How do I request time off?**\nA: Submit PTO request 2+ weeks in advance. Check blackout dates first.\n\n**Q: What if I'm running late?**\nA: Use /alert command to notify management ASAP. Call customers if delayed.",
+            "equipment": "**Q: Where do I get supplies?**\nA: Supply days are marked on calendar. Submit requests to inventory manager.\n\n**Q: What if equipment breaks?**\nA: Report immediately to supervisor. Don't use faulty equipment.",
+            "routes": "**Q: How are routes assigned?**\nA: Based on territory, experience, and workload. Check ATS night before.\n\n**Q: Can I trade routes?**\nA: Only with supervisor approval. Update ATS if approved."
+        }
+    }
+}
+
+
+# Knowledge Base Command
+@bot.tree.command(
+    name="kb",
+    description="Access knowledge base for training, troubleshooting, and FAQs",
+)
+@app_commands.choices(
+    topic=[
+        app_commands.Choice(name="💻 Software & Tools", value="software"),
+        app_commands.Choice(name="📚 Training & How-To", value="training"),
+        app_commands.Choice(name="🔧 Troubleshooting", value="troubleshooting"),
+        app_commands.Choice(name="🚨 Emergency Procedures", value="emergency"),
+        app_commands.Choice(name="❓ FAQs", value="faq"),
+        app_commands.Choice(name="📋 All Topics (Index)", value="all"),
+    ]
+)
+async def kb_cmd(
+    interaction: discord.Interaction,
+    topic: app_commands.Choice[str]
+):
+    """Access knowledge base articles"""
+
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        if topic.value == "all":
+            # Show index of all topics
+            embed = discord.Embed(
+                title="📚 Knowledge Base Index",
+                description="Use `/kb` with a specific topic to view detailed articles.",
+                color=0x00D2FF,
+                timestamp=discord.utils.utcnow()
+            )
+
+            for topic_key, topic_data in KNOWLEDGE_BASE.items():
+                article_list = "\n".join([f"• {name.capitalize()}" for name in topic_data["articles"].keys()])
+                embed.add_field(
+                    name=topic_data["title"],
+                    value=article_list,
+                    inline=False
+                )
+
+            embed.set_footer(text="Can't find what you need? Ask your manager or use /alert")
+
+        else:
+            # Show specific topic articles
+            topic_data = KNOWLEDGE_BASE.get(topic.value)
+            if not topic_data:
+                await interaction.followup.send("❌ Topic not found.", ephemeral=True)
+                return
+
+            embed = discord.Embed(
+                title=topic_data["title"],
+                description="Knowledge base articles:",
+                color=0x00D2FF,
+                timestamp=discord.utils.utcnow()
+            )
+
+            for article_name, article_content in topic_data["articles"].items():
+                # Truncate if too long for embed field
+                content = article_content[:1000] + "..." if len(article_content) > 1000 else article_content
+                embed.add_field(
+                    name=article_name.upper(),
+                    value=content,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Need more help? Contact your manager | Viewed by {interaction.user.display_name}")
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    except Exception as e:
+        await interaction.followup.send(
+            f"❌ Error loading knowledge base: {str(e)}",
+            ephemeral=True
+        )
+
+
+# ============================================================
 # REQUEST PANEL MODALS & BUTTON VIEW
 # (inlined from discord_request_buttons.py)
 # ============================================================
