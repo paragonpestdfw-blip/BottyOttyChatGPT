@@ -1017,6 +1017,221 @@ def send_office_alert():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/calendar/events', methods=['GET'])
+def get_calendar_events():
+    """Get all calendar events from database"""
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        c.execute('''
+            SELECT id, title, description, created_at, category, created_by
+            FROM tasks
+            WHERE task_type = 'calendar-event'
+            AND deleted_at IS NULL
+            ORDER BY created_at ASC
+        ''')
+
+        rows = c.fetchall()
+        events = []
+
+        for row in rows:
+            event_id, title, description, created_at, category, created_by = row
+
+            # Parse date from description (format: "Date: YYYY-MM-DD")
+            date_str = ""
+            year, month, day = None, None, None
+            if description:
+                lines = description.split('\n')
+                for line in lines:
+                    if line.startswith('Date: '):
+                        date_str = line.replace('Date: ', '').strip()
+                        try:
+                            date_parts = date_str.split('-')
+                            year = int(date_parts[0])
+                            month = int(date_parts[1])
+                            day = int(date_parts[2])
+                        except:
+                            pass
+                        break
+
+            events.append({
+                'id': event_id,
+                'title': title.replace('📅 ', ''),
+                'type': category or 'custom',
+                'year': year,
+                'month': month,
+                'day': day,
+                'description': description,
+                'created_by': created_by,
+                'created_at': created_at
+            })
+
+        conn.close()
+        return jsonify({'success': True, 'events': events})
+
+    except Exception as e:
+        print(f"Error getting calendar events: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calendar/events', methods=['POST'])
+def create_calendar_event():
+    """Create a new calendar event"""
+    try:
+        data = request.json
+        title = data.get('title', '')
+        event_type = data.get('type', 'custom')
+        year = data.get('year')
+        month = data.get('month')
+        day = data.get('day')
+        description = data.get('description', '')
+
+        if not title or not year or not month or not day:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+        # Format description with date
+        date_str = f"{year}-{month:02d}-{day:02d}"
+        full_description = f"Date: {date_str}\nType: {event_type}\n{description}"
+
+        # Add to database
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        c.execute('''
+            INSERT INTO tasks (
+                title, description, created_by, created_by_id,
+                task_type, category, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            f"📅 {title}",
+            full_description,
+            data.get('created_by', 'Web User'),
+            0,  # Default user ID for web
+            'calendar-event',
+            event_type,
+            'open',
+            datetime.now().isoformat()
+        ))
+
+        event_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'event': {
+                'id': event_id,
+                'title': title,
+                'type': event_type,
+                'year': year,
+                'month': month,
+                'day': day
+            }
+        })
+
+    except Exception as e:
+        print(f"Error creating calendar event: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calendar/events/<int:event_id>', methods=['DELETE'])
+def delete_calendar_event(event_id):
+    """Delete a calendar event (soft delete)"""
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        c.execute('''
+            UPDATE tasks
+            SET deleted_at = ?
+            WHERE id = ? AND task_type = 'calendar-event'
+        ''', (datetime.now().isoformat(), event_id))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Event deleted'})
+
+    except Exception as e:
+        print(f"Error deleting calendar event: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calendar/notes/<monthKey>', methods=['GET'])
+def get_month_notes(monthKey):
+    """Get notes for a specific month"""
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        # Store month notes in tasks table with special type
+        c.execute('''
+            SELECT description
+            FROM tasks
+            WHERE task_type = 'month-notes'
+            AND title = ?
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        ''', (monthKey,))
+
+        row = c.fetchone()
+        notes = row[0] if row else ""
+
+        conn.close()
+        return jsonify({'success': True, 'notes': notes})
+
+    except Exception as e:
+        print(f"Error getting month notes: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calendar/notes/<monthKey>', methods=['POST'])
+def save_month_notes(monthKey):
+    """Save notes for a specific month"""
+    try:
+        data = request.json
+        notes = data.get('notes', '')
+
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        # Check if notes exist for this month
+        c.execute('''
+            SELECT id FROM tasks
+            WHERE task_type = 'month-notes'
+            AND title = ?
+            AND deleted_at IS NULL
+        ''', (monthKey,))
+
+        existing = c.fetchone()
+
+        if existing:
+            # Update existing notes
+            c.execute('''
+                UPDATE tasks
+                SET description = ?, updated_at = ?
+                WHERE id = ?
+            ''', (notes, datetime.now().isoformat(), existing[0]))
+        else:
+            # Create new notes entry
+            c.execute('''
+                INSERT INTO tasks (
+                    title, description, task_type, status, created_at
+                ) VALUES (?, ?, ?, ?, ?)
+            ''', (monthKey, notes, 'month-notes', 'open', datetime.now().isoformat()))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Notes saved'})
+
+    except Exception as e:
+        print(f"Error saving month notes: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -2093,6 +2308,31 @@ class CalendarEventModal(ui.Modal, title="📅 Add Calendar Event"):
             'training': '📚', 'meeting': '👥', 'custom': '📌'
         }.get(self.event_type.value.lower(), '📅')
 
+        # Create Discord Scheduled Event
+        discord_event = None
+        try:
+            # Create datetime for the event (assume 9 AM on that date)
+            from datetime import timezone
+            event_datetime = datetime(year, month, day, 9, 0, tzinfo=timezone.utc)
+
+            # Only create if event is in the future
+            if event_datetime > datetime.now(timezone.utc):
+                guild = interaction.guild
+                if guild:
+                    # Create scheduled event
+                    discord_event = await guild.create_scheduled_event(
+                        name=f"{type_emoji} {self.title_input.value}",
+                        description=self.description.value[:1000] if self.description.value else "Company calendar event",
+                        start_time=event_datetime,
+                        end_time=event_datetime.replace(hour=17),  # Default end time 5 PM
+                        entity_type=discord.EntityType.external,
+                        location=self.event_type.value.capitalize(),
+                        privacy_level=discord.PrivacyLevel.guild_only
+                    )
+        except Exception as e:
+            print(f"Could not create Discord scheduled event: {e}")
+            # Continue even if Discord event creation fails
+
         embed = discord.Embed(
             title=f"{type_emoji} {self.title_input.value}",
             description=self.description.value or "No description",
@@ -2102,6 +2342,10 @@ class CalendarEventModal(ui.Modal, title="📅 Add Calendar Event"):
         embed.add_field(name="Date", value=self.date.value, inline=True)
         embed.add_field(name="Type", value=self.event_type.value.capitalize(), inline=True)
         embed.add_field(name="Event ID", value=f"#{task_number}", inline=True)
+
+        if discord_event:
+            embed.add_field(name="Discord Event", value="✅ Created in server events", inline=True)
+
         embed.set_footer(text=f"Added by {interaction.user.display_name}")
 
         await interaction.response.send_message("📅 Calendar event added!", embed=embed)
