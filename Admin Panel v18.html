@@ -1656,6 +1656,16 @@
           users: {},
         });
 
+        // Report Scheduling Configuration
+        const [reportSchedule, setReportSchedule] = useState({
+          enabled: false,
+          schedule_type: 'weekly',  // 'daily', 'weekly', 'monthly'
+          day: 'Friday',  // For weekly: Monday-Sunday
+          day_of_month: 1,  // For monthly: 1-31
+          hour: 9,  // 0-23 (24-hour format)
+          report_types: ['tasks', 'logs', 'training', 'inventory'],
+        });
+
         // Dashboard Features (Custom Pages)
         const [customPages, setCustomPages] = useState([]);
         const [newPageName, setNewPageName] = useState("");
@@ -1727,6 +1737,7 @@
             if (config.multiStepTaskSettings)
               setMultiStepTaskSettings(config.multiStepTaskSettings);
             if (config.discordConfig) setDiscordConfig(config.discordConfig);
+            if (config.reportSchedule) setReportSchedule(config.reportSchedule);
           }
 
           // Load user permissions from Dashboard's localStorage key
@@ -1888,6 +1899,7 @@
             logVisibilitySettings,
             multiStepTaskSettings,
             discordConfig,
+            reportSchedule,
           };
 
           localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
@@ -2059,6 +2071,7 @@
               logVisibilitySettings,
               multiStepTaskSettings,
               discordConfig,
+              reportSchedule,
             };
 
             // POST to admin-config endpoint

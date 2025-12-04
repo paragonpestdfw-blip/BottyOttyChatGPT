@@ -3159,6 +3159,295 @@ async def check_important_message_reminders():
     except Exception as e:
         print(f"Error in check_important_message_reminders: {e}")
 
+
+@tasks.loop(hours=1)
+async def check_scheduled_reports():
+    """Check if it's time to run scheduled reports and logs"""
+    try:
+        # Load report schedule from bot_config.json
+        report_schedule = {}
+        try:
+            if os.path.exists('bot_config.json'):
+                with open('bot_config.json', 'r') as f:
+                    config_data = json.load(f)
+                    report_schedule = config_data.get('report_schedule', {})
+        except Exception as e:
+            print(f"Could not load report schedule: {e}")
+            return
+
+        if not report_schedule.get('enabled', False):
+            return  # Reports disabled
+
+        # Get current time info
+        now = datetime.now()
+        current_day = now.strftime('%A')  # Monday, Tuesday, etc.
+        current_hour = now.hour
+
+        # Check schedule type
+        schedule_type = report_schedule.get('schedule_type', 'weekly')
+        schedule_day = report_schedule.get('day', 'Friday')
+        schedule_hour = report_schedule.get('hour', 9)  # Default 9 AM
+
+        should_run = False
+
+        if schedule_type == 'daily':
+            # Run daily at specified hour
+            if current_hour == schedule_hour:
+                should_run = True
+        elif schedule_type == 'weekly':
+            # Run weekly on specified day and hour
+            if current_day == schedule_day and current_hour == schedule_hour:
+                should_run = True
+        elif schedule_type == 'monthly':
+            # Run monthly on specified day of month
+            day_of_month = report_schedule.get('day_of_month', 1)
+            if now.day == day_of_month and current_hour == schedule_hour:
+                should_run = True
+
+        if should_run:
+            # Check if we already ran today (prevent duplicate runs)
+            last_run_file = 'last_report_run.txt'
+            today_str = now.strftime('%Y-%m-%d-%H')
+
+            try:
+                if os.path.exists(last_run_file):
+                    with open(last_run_file, 'r') as f:
+                        last_run = f.read().strip()
+                        if last_run == today_str:
+                            return  # Already ran this hour
+            except:
+                pass
+
+            # Run the reports
+            await generate_and_send_reports()
+
+            # Save last run time
+            try:
+                with open(last_run_file, 'w') as f:
+                    f.write(today_str)
+            except:
+                pass
+
+    except Exception as e:
+        print(f"Error in check_scheduled_reports: {e}")
+
+
+async def generate_and_send_reports():
+    """Generate reports and send them to the Discord reports channel"""
+    try:
+        reports_channel_id = CONFIG.get('global_logs', {}).get('reports')
+        if not reports_channel_id:
+            print("No reports channel configured")
+            return
+
+        reports_channel = bot.get_channel(reports_channel_id)
+        if not reports_channel:
+            print(f"Could not find reports channel {reports_channel_id}")
+            return
+
+        # Get report configuration
+        report_config = {}
+        try:
+            if os.path.exists('bot_config.json'):
+                with open('bot_config.json', 'r') as f:
+                    config_data = json.load(f)
+                    report_config = config_data.get('report_schedule', {})
+        except:
+            pass
+
+        report_types = report_config.get('report_types', ['tasks', 'logs'])
+
+        # Header message
+        now = datetime.now()
+        header_embed = discord.Embed(
+            title="📊 Automated Report",
+            description=f"Generated on {now.strftime('%A, %B %d, %Y at %I:%M %p')}",
+            color=discord.Color.blue()
+        )
+        await reports_channel.send(embed=header_embed)
+
+        # Generate task report
+        if 'tasks' in report_types:
+            await generate_task_report(reports_channel)
+
+        # Generate log summaries
+        if 'logs' in report_types:
+            await generate_log_summary(reports_channel)
+
+        # Generate training report
+        if 'training' in report_types:
+            await generate_training_report(reports_channel)
+
+        # Generate inventory report
+        if 'inventory' in report_types:
+            await generate_inventory_report(reports_channel)
+
+        print(f"✅ Automated reports sent to #{reports_channel.name}")
+
+    except Exception as e:
+        print(f"Error generating reports: {e}")
+
+
+async def generate_task_report(channel):
+    """Generate task summary report"""
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        # Get task statistics for past week
+        c.execute('''SELECT
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+                        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN due_date < date('now') AND status != 'completed' THEN 1 ELSE 0 END) as overdue
+                     FROM tasks
+                     WHERE created_at >= datetime('now', '-7 days')''')
+
+        stats = c.fetchone()
+        total, completed, in_progress, pending, overdue = stats
+
+        embed = discord.Embed(
+            title="📋 Task Summary (Past 7 Days)",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="Total Tasks", value=f"{total}", inline=True)
+        embed.add_field(name="✅ Completed", value=f"{completed}", inline=True)
+        embed.add_field(name="📊 In Progress", value=f"{in_progress}", inline=True)
+        embed.add_field(name="⏳ Pending", value=f"{pending}", inline=True)
+        embed.add_field(name="⚠️ Overdue", value=f"{overdue}", inline=True)
+
+        if total > 0:
+            completion_rate = (completed / total) * 100
+            embed.add_field(name="Completion Rate", value=f"{completion_rate:.1f}%", inline=True)
+
+        # Top performers
+        c.execute('''SELECT assigned_to, COUNT(*) as completed_count
+                     FROM tasks
+                     WHERE status = 'completed'
+                     AND completed_at >= datetime('now', '-7 days')
+                     AND assigned_to IS NOT NULL
+                     GROUP BY assigned_to
+                     ORDER BY completed_count DESC
+                     LIMIT 5''')
+
+        top_performers = c.fetchall()
+        if top_performers:
+            performer_list = "\n".join([f"{name}: {count} tasks" for name, count in top_performers])
+            embed.add_field(name="🌟 Top Performers", value=performer_list, inline=False)
+
+        conn.close()
+        await channel.send(embed=embed)
+
+    except Exception as e:
+        print(f"Error generating task report: {e}")
+
+
+async def generate_log_summary(channel):
+    """Generate summary of log entries"""
+    try:
+        embed = discord.Embed(
+            title="📝 Activity Log Summary (Past 7 Days)",
+            description="Summary of logged events across all categories",
+            color=discord.Color.orange()
+        )
+
+        log_categories = {
+            'damages': '🔨 Damage Reports',
+            'fleet': '🚗 Fleet Issues',
+            'training': '📚 Training Events',
+            'safety_and_accident': '⚠️ Safety Incidents',
+            'customer_feedback': '💬 Customer Feedback',
+            'tech_reminders': '🔔 Tech Reminders',
+            'inventory': '📦 Inventory Updates',
+            'office_operations': '🏢 Office Operations'
+        }
+
+        # Since we don't have a centralized log table, we'll use a simple count
+        # You can enhance this based on your actual logging system
+        for key, label in log_categories.items():
+            log_channel_id = CONFIG.get('global_logs', {}).get(key)
+            if log_channel_id:
+                log_channel = bot.get_channel(log_channel_id)
+                if log_channel:
+                    # Count messages in past 7 days
+                    week_ago = datetime.now() - timedelta(days=7)
+                    count = 0
+                    async for message in log_channel.history(after=week_ago, limit=None):
+                        if message.author == bot.user:
+                            count += 1
+                    if count > 0:
+                        embed.add_field(name=label, value=f"{count} entries", inline=True)
+
+        await channel.send(embed=embed)
+
+    except Exception as e:
+        print(f"Error generating log summary: {e}")
+
+
+async def generate_training_report(channel):
+    """Generate training attendance report"""
+    try:
+        conn = sqlite3.connect('tasks.db')
+        c = conn.cursor()
+
+        # Check if trainings table exists
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trainings'")
+        if not c.fetchone():
+            conn.close()
+            return
+
+        # Get recent trainings
+        c.execute('''SELECT title, date, presenter,
+                            (SELECT COUNT(*) FROM training_attendance WHERE training_id = trainings.id) as attendee_count
+                     FROM trainings
+                     WHERE date >= date('now', '-30 days')
+                     ORDER BY date DESC
+                     LIMIT 10''')
+
+        trainings = c.fetchall()
+
+        if trainings:
+            embed = discord.Embed(
+                title="📚 Training Report (Past 30 Days)",
+                color=discord.Color.purple()
+            )
+
+            for title, date, presenter, count in trainings:
+                embed.add_field(
+                    name=title,
+                    value=f"Date: {date}\nPresenter: {presenter}\nAttendees: {count}",
+                    inline=False
+                )
+
+            await channel.send(embed=embed)
+
+        conn.close()
+
+    except Exception as e:
+        print(f"Error generating training report: {e}")
+
+
+async def generate_inventory_report(channel):
+    """Generate inventory report placeholder"""
+    try:
+        # Placeholder for inventory reporting
+        # You can enhance this based on your inventory tracking system
+        embed = discord.Embed(
+            title="📦 Inventory Status",
+            description="Weekly inventory check reminder",
+            color=discord.Color.teal()
+        )
+        embed.add_field(
+            name="Action Required",
+            value="Please update inventory logs in #inventory-log",
+            inline=False
+        )
+        await channel.send(embed=embed)
+
+    except Exception as e:
+        print(f"Error generating inventory report: {e}")
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
@@ -3175,6 +3464,11 @@ async def on_ready():
     if not check_important_message_reminders.is_running():
         check_important_message_reminders.start()
         print('✅ Important message reminder task started')
+
+    # Start background task for scheduled reports
+    if not check_scheduled_reports.is_running():
+        check_scheduled_reports.start()
+        print('✅ Scheduled reports task started')
 
     # Persistent views
     bot.add_view(RequestPanelView())
