@@ -3752,6 +3752,20 @@
         const fileInputRef = useRef(null);
         const searchTimeoutRef = useRef(null);
 
+        // Swamped Alert
+        const [swampedAlert, setSwampedAlert] = useState(() => {
+          try {
+            const saved = localStorage.getItem("bottyotty-swamped-alert");
+            if (saved) {
+              const alert = JSON.parse(saved);
+              return alert.active ? alert : null;
+            }
+          } catch (e) {
+            console.error("Error loading swamped alert:", e);
+          }
+          return null;
+        });
+
         // Current logged-in user
         const [currentUser, setCurrentUser] = useState(() => {
           const savedUser = localStorage.getItem("bottyotty-current-user");
@@ -3799,6 +3813,34 @@
           window.addEventListener("focus", handleFocus);
           return () => window.removeEventListener("focus", handleFocus);
         }, [currentUser]);
+
+        // Check for swamped alert changes
+        useEffect(() => {
+          const checkSwampedAlert = () => {
+            try {
+              const saved = localStorage.getItem("bottyotty-swamped-alert");
+              if (saved) {
+                const alert = JSON.parse(saved);
+                setSwampedAlert(alert.active ? alert : null);
+              } else {
+                setSwampedAlert(null);
+              }
+            } catch (e) {
+              console.error("Error checking swamped alert:", e);
+            }
+          };
+
+          // Check on window focus
+          window.addEventListener("focus", checkSwampedAlert);
+
+          // Check every 30 seconds
+          const interval = setInterval(checkSwampedAlert, 30000);
+
+          return () => {
+            window.removeEventListener("focus", checkSwampedAlert);
+            clearInterval(interval);
+          };
+        }, []);
 
         // FIXED: Backup reminder - only shows once per session after 7 days
         useEffect(() => {
@@ -6368,6 +6410,50 @@
                 </div>
               </div>
             </div>
+
+            {/* Swamped Alert Banner */}
+            {swampedAlert && (
+              <div className="mb-6 glass rounded-2xl p-4 border-4 border-red-500 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">🆘</div>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-2xl font-bold text-white">
+                        SWAMPED ALERT - {swampedAlert.recipients.toUpperCase()}
+                      </h3>
+                      <div className="text-gray-300 text-sm">
+                        {new Date(swampedAlert.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                    <p className="text-white text-lg mb-3">
+                      {swampedAlert.message}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const alert = { ...swampedAlert, active: false };
+                          localStorage.setItem(
+                            "bottyotty-swamped-alert",
+                            JSON.stringify(alert)
+                          );
+                          setSwampedAlert(null);
+                          showNotification("Alert dismissed", "success");
+                        }}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+                      >
+                        ✅ Dismiss Alert
+                      </button>
+                      <a
+                        href="Admin Panel v18.html"
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm"
+                      >
+                        ⚙️ Manage in Admin Panel
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* File Tab Navigation */}
             <div className="mb-0">
