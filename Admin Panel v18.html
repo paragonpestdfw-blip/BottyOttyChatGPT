@@ -2220,7 +2220,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${pageBuilderName} - BottyOtty</title>
+  <title>\${pageBuilderName} - BottyOtty</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -2266,38 +2266,38 @@
     function App() {
       ${enabledFeatures.includes('taskLists') ? `
       const [tasks, setTasks] = useState(() => {
-        const saved = localStorage.getItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-tasks');
+        const saved = localStorage.getItem('bottyotty-\${pageBuilderName.toLowerCase().replace(/\\\\s+/g, '-')}-tasks');
         return saved ? JSON.parse(saved) : [];
       });
 
       useEffect(() => {
-        localStorage.setItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-tasks', JSON.stringify(tasks));
+        localStorage.setItem('bottyotty-\${pageBuilderName.toLowerCase().replace(/\\\\s+/g, '-')}-tasks', JSON.stringify(tasks));
       }, [tasks]);
       ` : ''}
 
       ${enabledFeatures.includes('notes') ? `
       const [notes, setNotes] = useState(() => {
-        const saved = localStorage.getItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-notes');
+        const saved = localStorage.getItem('bottyotty-\${pageBuilderName.toLowerCase().replace(/\\\\s+/g, '-')}-notes');
         return saved ? JSON.parse(saved) : '';
       });
 
       useEffect(() => {
-        localStorage.setItem('bottyotty-${pageBuilderName.toLowerCase().replace(/\\s+/g, '-')}-notes', notes);
+        localStorage.setItem('bottyotty-\${pageBuilderName.toLowerCase().replace(/\\\\s+/g, '-')}-notes', notes);
       }, [notes]);
       ` : ''}
 
       return (
         <div className="max-w-7xl mx-auto">
           <div className="glass p-8 mb-6">
-            <h1 className="text-4xl font-bold mb-2">${template.icon} ${pageBuilderName}</h1>
-            <p className="text-gray-200">${pageBuilderDescription || 'Custom page built with BottyOtty Page Builder'}</p>
+            <h1 className="text-4xl font-bold mb-2">\${template.icon} \${pageBuilderName}</h1>
+            <p className="text-gray-200">\${pageBuilderDescription || 'Custom page built with BottyOtty Page Builder'}</p>
           </div>
 
           <div className="glass p-8">
             <div className="text-center text-gray-300">
               <p className="text-xl mb-4">🎨 Your custom page is ready!</p>
-              <p className="text-sm">Template: <strong>${template.name}</strong></p>
-              <p className="text-sm">Features: <strong>${enabledFeatures.join(', ') || 'none'}</strong></p>
+              <p className="text-sm">Template: <strong>\${template.name}</strong></p>
+              <p className="text-sm">Features: <strong>\${enabledFeatures.join(', ') || 'none'}</strong></p>
               <div className="mt-8 p-6 glass-element rounded-lg">
                 <p className="text-lg mb-4">Start building your content here!</p>
                 <p className="text-sm text-gray-400">This is a basic template. You can now customize the HTML, add your components, and integrate with your backend.</p>
