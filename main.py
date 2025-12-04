@@ -3250,6 +3250,28 @@ class ManagementSelect(ui.Select):
             await interaction.response.send_modal(ManagerTutorialModal())
 
 
+# ============================================================
+# PANEL VIEWS
+# ============================================================
+
+class OfficeTeamPanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(OfficeTeamSelect())
+
+
+class MoveUpPanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(MoveUpSelect())
+
+
+class ManagementPanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(ManagementSelect())
+
+
 class RequestPanelView(ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -3863,12 +3885,61 @@ async def on_ready():
 
     # Persistent views
     bot.add_view(RequestPanelView())
+    bot.add_view(OfficeTeamPanelView())
+    bot.add_view(MoveUpPanelView())
+    bot.add_view(ManagementPanelView())
+    print('✅ All panel views registered')
 
     try:
         await bot.tree.sync()
         print("✅ Slash commands synced.")
     except Exception as e:
         print(f"❌ Error syncing slash commands: {e}")
+
+
+def build_office_team_panel_embed() -> discord.Embed:
+    return discord.Embed(
+        title="🏢 Office Team Operations",
+        description=(
+            "Use the dropdown below to access office team tools:\n"
+            "• ATS IT Issues\n"
+            "• Shift Cover Requests\n"
+            "• FieldRoutes IT Issues\n"
+            "• Recruitment Requests\n"
+            "• Pending Cancellations"
+        ),
+        color=discord.Color.blue(),
+    )
+
+
+def build_moveup_panel_embed() -> discord.Embed:
+    return discord.Embed(
+        title="📋 Job Move-Up Tracking",
+        description=(
+            "Use the dropdown below to add jobs to move-up lists:\n"
+            "• 🪲 Pest Jobs\n"
+            "• 🐀 Rodent Jobs\n"
+            "• 💩 Insulation Jobs\n"
+            "• 🤑 Sales Inspections\n"
+            "• 🐜 Termite Jobs"
+        ),
+        color=discord.Color.orange(),
+    )
+
+
+def build_management_panel_embed() -> discord.Embed:
+    return discord.Embed(
+        title="📊 Management Tools",
+        description=(
+            "Use the dropdown below to access management tools:\n"
+            "• Weekly Reservice Reports\n"
+            "• Manager Password Storage\n"
+            "• Meeting Notes\n"
+            "• Manager Documents\n"
+            "• Manager Tutorials"
+        ),
+        color=discord.Color.purple(),
+    )
 
 
 def build_request_panel_embed() -> discord.Embed:
@@ -3945,6 +4016,51 @@ async def on_message(message):
         await message.channel.send(embed=build_request_panel_embed(), view=RequestPanelView())
 
         # Try to delete the command message to keep the channel clean
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass
+
+        return
+
+    # Handle @officepanel command (admin only)
+    if message.content.strip().lower().startswith('@officepanel'):
+        if not message.author.guild_permissions.administrator:
+            await message.channel.send("❌ You need administrator permissions to use this command.")
+            return
+
+        await message.channel.send(embed=build_office_team_panel_embed(), view=OfficeTeamPanelView())
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass
+
+        return
+
+    # Handle @moveuppanel command (admin only)
+    if message.content.strip().lower().startswith('@moveuppanel'):
+        if not message.author.guild_permissions.administrator:
+            await message.channel.send("❌ You need administrator permissions to use this command.")
+            return
+
+        await message.channel.send(embed=build_moveup_panel_embed(), view=MoveUpPanelView())
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass
+
+        return
+
+    # Handle @managementpanel command (admin only)
+    if message.content.strip().lower().startswith('@managementpanel'):
+        if not message.author.guild_permissions.administrator:
+            await message.channel.send("❌ You need administrator permissions to use this command.")
+            return
+
+        await message.channel.send(embed=build_management_panel_embed(), view=ManagementPanelView())
+
         try:
             await message.delete()
         except discord.Forbidden:
