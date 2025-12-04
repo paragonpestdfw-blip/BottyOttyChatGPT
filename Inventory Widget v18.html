@@ -19,31 +19,90 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect } = React;
-      const STORAGE_KEY = "bottyotty-inventory";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function InventoryWidget() {
-        const [items, setItems] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+        const [items, setItems] = useState([]);
         const [showAdd, setShowAdd] = useState(false);
+        const [loading, setLoading] = useState(true);
         const [form, setForm] = useState({ name: "", quantity: 0, minQuantity: 10, category: "chemicals", location: "", notes: "" });
 
-        useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);
+        useEffect(() => { loadItems(); }, []);
 
-        const addItem = () => {
+        const loadItems = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/inventory`);
+            const data = await response.json();
+            if (data.success) {
+              setItems(data.items);
+            }
+          } catch (error) {
+            console.error("Error loading inventory:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const addItem = async () => {
           if (!form.name) return alert("Item name required");
-          setItems([...items, { ...form, id: Date.now() }]);
-          setForm({ name: "", quantity: 0, minQuantity: 10, category: "chemicals", location: "", notes: "" });
-          setShowAdd(false);
+          try {
+            const response = await fetch(`${API_URL}/api/inventory`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(form)
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadItems();
+              setForm({ name: "", quantity: 0, minQuantity: 10, category: "chemicals", location: "", notes: "" });
+              setShowAdd(false);
+            }
+          } catch (error) {
+            console.error("Error adding item:", error);
+            alert("Failed to add item");
+          }
         };
 
-        const updateQuantity = (id, delta) => {
-          setItems(items.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i));
+        const updateQuantity = async (id, delta) => {
+          try {
+            const item = items.find(i => i.id === id);
+            const newQuantity = Math.max(0, item.quantity + delta);
+            const response = await fetch(`${API_URL}/api/inventory/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...item, quantity: newQuantity })
+            });
+            const data = await response.json();
+            if (data.success) loadItems();
+          } catch (error) {
+            console.error("Error updating quantity:", error);
+          }
         };
 
-        const deleteItem = (id) => {
-          if (confirm("Delete this item?")) setItems(items.filter(i => i.id !== id));
+        const deleteItem = async (id) => {
+          if (!confirm("Delete this item?")) return;
+          try {
+            const response = await fetch(`${API_URL}/api/inventory/${id}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) loadItems();
+          } catch (error) {
+            console.error("Error deleting item:", error);
+          }
         };
 
         const lowStock = items.filter(i => i.quantity <= i.minQuantity);
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading inventory...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-8">

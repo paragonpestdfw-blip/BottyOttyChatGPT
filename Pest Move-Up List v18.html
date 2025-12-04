@@ -21,50 +21,134 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect } = React;
-      const STORAGE_KEY = "bottyotty-pest-moveup";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function PestMoveUpList() {
-        const [customers, setCustomers] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+        const [customers, setCustomers] = useState([]);
         const [showAdd, setShowAdd] = useState(false);
+        const [loading, setLoading] = useState(true);
         const [form, setForm] = useState({ name: "", phone: "", address: "", reason: "cancellation", priority: "medium", notes: "", dateAdded: new Date().toISOString().split('T')[0] });
 
-        useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(customers)); }, [customers]);
+        useEffect(() => { loadCustomers(); }, []);
 
-        const addCustomer = () => {
+        const loadCustomers = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/pest-moveup`);
+            const data = await response.json();
+            if (data.success) {
+              setCustomers(data.customers);
+            }
+          } catch (error) {
+            console.error("Error loading customers:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const addCustomer = async () => {
           if (!form.name || !form.phone) return alert("Name and phone required");
-          setCustomers([...customers, { ...form, id: Date.now(), contacted: false }]);
-          setForm({ name: "", phone: "", address: "", reason: "cancellation", priority: "medium", notes: "", dateAdded: new Date().toISOString().split('T')[0] });
-          setShowAdd(false);
+          try {
+            const response = await fetch(`${API_URL}/api/pest-moveup`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...form, contacted: false })
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadCustomers();
+              setForm({ name: "", phone: "", address: "", reason: "cancellation", priority: "medium", notes: "", dateAdded: new Date().toISOString().split('T')[0] });
+              setShowAdd(false);
+            }
+          } catch (error) {
+            console.error("Error adding customer:", error);
+            alert("Failed to add customer");
+          }
         };
 
-        const toggleContacted = (id) => {
-          setCustomers(customers.map(c => c.id === id ? { ...c, contacted: !c.contacted } : c));
+        const toggleContacted = async (id) => {
+          try {
+            const customer = customers.find(c => c.id === id);
+            const response = await fetch(`${API_URL}/api/pest-moveup/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...customer, contacted: !customer.contacted })
+            });
+            const data = await response.json();
+            if (data.success) loadCustomers();
+          } catch (error) {
+            console.error("Error updating customer:", error);
+          }
         };
 
-        const deleteCustomer = (id) => {
-          if (confirm("Remove from move-up list?")) setCustomers(customers.filter(c => c.id !== id));
+        const deleteCustomer = async (id) => {
+          if (!confirm("Remove from move-up list?")) return;
+          try {
+            const response = await fetch(`${API_URL}/api/pest-moveup/${id}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) loadCustomers();
+          } catch (error) {
+            console.error("Error deleting customer:", error);
+          }
         };
 
-        const moveUp = (id) => {
+        const moveUp = async (id) => {
           const idx = customers.findIndex(c => c.id === id);
           if (idx > 0) {
             const newList = [...customers];
             [newList[idx - 1], newList[idx]] = [newList[idx], newList[idx - 1]];
+            // Update positions
+            for (let i = 0; i < newList.length; i++) {
+              newList[i].position = i;
+            }
             setCustomers(newList);
+            // Save to backend
+            await savePositions(newList);
           }
         };
 
-        const moveDown = (id) => {
+        const moveDown = async (id) => {
           const idx = customers.findIndex(c => c.id === id);
           if (idx < customers.length - 1) {
             const newList = [...customers];
             [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
+            // Update positions
+            for (let i = 0; i < newList.length; i++) {
+              newList[i].position = i;
+            }
             setCustomers(newList);
+            // Save to backend
+            await savePositions(newList);
+          }
+        };
+
+        const savePositions = async (list) => {
+          try {
+            for (const customer of list) {
+              await fetch(`${API_URL}/api/pest-moveup/${customer.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(customer)
+              });
+            }
+          } catch (error) {
+            console.error("Error saving positions:", error);
           }
         };
 
         const highPriority = customers.filter(c => c.priority === 'high' && !c.contacted);
         const contacted = customers.filter(c => c.contacted).length;
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading customers...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-8">

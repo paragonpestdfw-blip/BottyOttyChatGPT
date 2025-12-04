@@ -72,20 +72,11 @@
     <script type="text/babel">
       const { useState, useEffect } = React;
 
-      const STORAGE_KEY = "bottyotty-lead-sites";
-      const DEFAULT_API_URL = "https://bottyotty-production.up.railway.app";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function LeadSitesSwitchboard() {
-        const [leadSites, setLeadSites] = useState(() => {
-          try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : [];
-          } catch (e) {
-            console.error("Failed to load lead sites:", e);
-            return [];
-          }
-        });
-
+        const [leadSites, setLeadSites] = useState([]);
+        const [loading, setLoading] = useState(true);
         const [showAddSite, setShowAddSite] = useState(false);
         const [editingSite, setEditingSite] = useState(null);
         const [newSite, setNewSite] = useState({
@@ -97,52 +88,82 @@
           apiKey: "",
           notes: "",
         });
-        const [notification, setNotification] = useState(null);
 
-        // Save to localStorage
-        useEffect(() => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(leadSites));
-        }, [leadSites]);
+        useEffect(() => { loadSites(); }, []);
+
+        const loadSites = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/lead-sites`);
+            const data = await response.json();
+            if (data.success) {
+              setLeadSites(data.sites);
+            }
+          } catch (error) {
+            console.error("Error loading lead sites:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+        const [notification, setNotification] = useState(null);
 
         const showNotification = (message, type = "success") => {
           setNotification({ message, type });
           setTimeout(() => setNotification(null), 3000);
         };
 
-        const addOrUpdateSite = () => {
+        const addOrUpdateSite = async () => {
           if (!newSite.name.trim()) {
             showNotification("Please enter a site name", "error");
             return;
           }
 
-          if (editingSite) {
-            // Update existing
-            setLeadSites(
-              leadSites.map((site) =>
-                site.id === editingSite.id
-                  ? { ...newSite, id: editingSite.id }
-                  : site
-              )
-            );
-            showNotification("Lead site updated successfully!", "success");
-          } else {
-            // Add new
-            const site = {
-              ...newSite,
-              id: Date.now(),
-              createdAt: new Date().toISOString(),
-            };
-            setLeadSites([...leadSites, site]);
-            showNotification("Lead site added successfully!", "success");
+          try {
+            if (editingSite) {
+              // Update existing
+              const response = await fetch(`${API_URL}/api/lead-sites/${editingSite.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSite)
+              });
+              const data = await response.json();
+              if (data.success) {
+                loadSites();
+                showNotification("Lead site updated successfully!", "success");
+              }
+            } else {
+              // Add new
+              const response = await fetch(`${API_URL}/api/lead-sites`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSite)
+              });
+              const data = await response.json();
+              if (data.success) {
+                loadSites();
+                showNotification("Lead site added successfully!", "success");
+              }
+            }
+            resetForm();
+          } catch (error) {
+            console.error("Error saving lead site:", error);
+            showNotification("Failed to save lead site", "error");
           }
-
-          resetForm();
         };
 
-        const deleteSite = (id) => {
-          if (confirm("Delete this lead site?")) {
-            setLeadSites(leadSites.filter((site) => site.id !== id));
-            showNotification("Lead site deleted", "success");
+        const deleteSite = async (id) => {
+          if (!confirm("Delete this lead site?")) return;
+          try {
+            const response = await fetch(`${API_URL}/api/lead-sites/${id}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadSites();
+              showNotification("Lead site deleted", "success");
+            }
+          } catch (error) {
+            console.error("Error deleting lead site:", error);
+            showNotification("Failed to delete lead site", "error");
           }
         };
 
@@ -195,6 +216,16 @@
         const activeSites = leadSites.filter((s) => s.status === "active");
         const pausedSites = leadSites.filter((s) => s.status === "paused");
         const inactiveSites = leadSites.filter((s) => s.status === "inactive");
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading lead sites...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-4 md:p-8">

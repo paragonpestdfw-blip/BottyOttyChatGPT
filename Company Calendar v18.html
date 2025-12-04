@@ -125,29 +125,13 @@
         custom: { icon: "📌", label: "Custom Event", color: "event-general" },
       };
 
-      const STORAGE_KEY = "bottyotty-calendar-events";
-      const NOTES_KEY = "bottyotty-calendar-notes";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function CompanyCalendar() {
         const [currentDate, setCurrentDate] = useState(new Date());
-        const [events, setEvents] = useState(() => {
-          try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : {};
-          } catch (e) {
-            console.error("Failed to load events:", e);
-            return {};
-          }
-        });
-        const [monthNotes, setMonthNotes] = useState(() => {
-          try {
-            const saved = localStorage.getItem(NOTES_KEY);
-            return saved ? JSON.parse(saved) : {};
-          } catch (e) {
-            console.error("Failed to load notes:", e);
-            return {};
-          }
-        });
+        const [events, setEvents] = useState({});
+        const [monthNotes, setMonthNotes] = useState({});
+        const [loading, setLoading] = useState(true);
         const [showAddEvent, setShowAddEvent] = useState(false);
         const [selectedDate, setSelectedDate] = useState(null);
         const [newEvent, setNewEvent] = useState({
@@ -156,15 +140,47 @@
           mode: "general",
         });
 
-        // Save events to localStorage
+        // Load events and notes on mount
         useEffect(() => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-        }, [events]);
+          loadEvents();
+          loadMonthNotes();
+        }, []);
 
-        // Save notes to localStorage
-        useEffect(() => {
-          localStorage.setItem(NOTES_KEY, JSON.stringify(monthNotes));
-        }, [monthNotes]);
+        const loadEvents = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/calendar/events`);
+            const data = await response.json();
+            if (data.success) {
+              // Convert array to object keyed by date
+              const eventsObj = {};
+              data.events.forEach(event => {
+                const key = `${event.year}-${event.month}-${event.day}`;
+                if (!eventsObj[key]) eventsObj[key] = [];
+                eventsObj[key].push(event);
+              });
+              setEvents(eventsObj);
+            }
+          } catch (error) {
+            console.error("Error loading events:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const loadMonthNotes = async () => {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth();
+          const monthKey = `${year}-${month}`;
+          try {
+            const response = await fetch(`${API_URL}/api/calendar/notes/${monthKey}`);
+            const data = await response.json();
+            if (data.success) {
+              setMonthNotes({ ...monthNotes, [monthKey]: data.notes });
+            }
+          } catch (error) {
+            console.error("Error loading notes:", error);
+          }
+        };
 
         const monthKey = `\${currentDate.getFullYear()}-\${currentDate.getMonth()}`;
         const currentMonthNotes = monthNotes[monthKey] || "";
@@ -198,34 +214,44 @@
           return events[key] || [];
         };
 
-        const addEvent = () => {
+        const addEvent = async () => {
           if (!newEvent.title.trim() || !selectedDate) return;
 
-          const key = getDateKey(selectedDate);
-          const dayEvents = events[key] || [];
-          dayEvents.push({
-            ...newEvent,
-            id: Date.now(),
-            createdAt: new Date().toISOString(),
-          });
-
-          setEvents({ ...events, [key]: dayEvents });
-          setNewEvent({ title: "", type: "custom", mode: "general" });
-          setShowAddEvent(false);
-          setSelectedDate(null);
+          try {
+            const response = await fetch(`${API_URL}/api/calendar/events`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: newEvent.title,
+                type: newEvent.type,
+                mode: newEvent.mode,
+                year: year,
+                month: month,
+                day: selectedDate
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadEvents();
+              setNewEvent({ title: "", type: "custom", mode: "general" });
+              setShowAddEvent(false);
+              setSelectedDate(null);
+            }
+          } catch (error) {
+            console.error("Error adding event:", error);
+            alert("Failed to add event");
+          }
         };
 
-        const deleteEvent = (day, eventId) => {
-          const key = getDateKey(day);
-          const dayEvents = events[key] || [];
-          const filtered = dayEvents.filter((e) => e.id !== eventId);
-
-          if (filtered.length === 0) {
-            const newEvents = { ...events };
-            delete newEvents[key];
-            setEvents(newEvents);
-          } else {
-            setEvents({ ...events, [key]: filtered });
+        const deleteEvent = async (day, eventId) => {
+          try {
+            const response = await fetch(`${API_URL}/api/calendar/events/${eventId}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) loadEvents();
+          } catch (error) {
+            console.error("Error deleting event:", error);
           }
         };
 
@@ -241,9 +267,31 @@
           setCurrentDate(new Date());
         };
 
-        const updateMonthNotes = (notes) => {
-          setMonthNotes({ ...monthNotes, [monthKey]: notes });
+        const updateMonthNotes = async (notes) => {
+          try {
+            const response = await fetch(`${API_URL}/api/calendar/notes/${monthKey}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notes })
+            });
+            const data = await response.json();
+            if (data.success) {
+              setMonthNotes({ ...monthNotes, [monthKey]: notes });
+            }
+          } catch (error) {
+            console.error("Error updating notes:", error);
+          }
         };
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading calendar...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-4 md:p-8">
