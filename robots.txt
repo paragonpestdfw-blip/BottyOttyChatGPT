@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Allow all web crawlers to access all content
+# Suitable for public-facing bot dashboard and documentation
+
+Sitemap: https://pestresource.com/sitemap.xml
