@@ -1347,9 +1347,198 @@ async def exportfiles(
     await interaction.followup.send(
         f"✅ Found {file_count} **file** attachment(s) (non-images) in "
         f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
-        f"I’ve DM’d you the NDJSON export.",
+        f"I've DM'd you the NDJSON export.",
         ephemeral=True,
     )
+
+
+@bot.tree.command(
+    name="logs",
+    description="View log entries from a specific channel within a date range.",
+)
+@app_commands.describe(
+    log_type="Type of log to view",
+    mode="Timeframe preset or custom range",
+    start="For custom mode: start date (YYYY-MM-DD)",
+    end="For custom mode: end date (YYYY-MM-DD, optional)",
+    max_messages="Max messages to scan (default 1000)",
+)
+@app_commands.choices(
+    log_type=[
+        app_commands.Choice(name="Damages Log", value="damages-log"),
+        app_commands.Choice(name="Fleet Reporting Log", value="fleet-reporting-log"),
+        app_commands.Choice(name="Training Log", value="training-log"),
+        app_commands.Choice(name="Call-Outs Log", value="call-outs-log"),
+        app_commands.Choice(name="Hours Updates Log", value="hours-updates-logs"),
+        app_commands.Choice(name="Pending Appointments Log", value="pending-appointments-logs"),
+        app_commands.Choice(name="Requests Log", value="requests-log"),
+        app_commands.Choice(name="Extra Route Log", value="extra-route-log"),
+        app_commands.Choice(name="Payment Methods Not Received Log", value="payment-methods-not-received-log"),
+    ],
+    mode=[
+        app_commands.Choice(name="Last 7 days", value="last_7"),
+        app_commands.Choice(name="Last 30 days", value="last_30"),
+        app_commands.Choice(name="Last 90 days", value="last_90"),
+        app_commands.Choice(name="Custom range", value="custom"),
+    ]
+)
+async def logs(
+    interaction: discord.Interaction,
+    log_type: app_commands.Choice[str],
+    mode: app_commands.Choice[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    max_messages: int = 1000,
+):
+    """View log entries from specific log channels with date filtering."""
+
+    # Map log types to channel names
+    LOG_CHANNELS = {
+        "damages-log": "damages-log",
+        "fleet-reporting-log": "fleet-reporting-log",
+        "training-log": "training-log",
+        "call-outs-log": "call-outs-log",
+        "hours-updates-logs": "hours-updates-logs",
+        "pending-appointments-logs": "pending-appointments-logs",
+        "requests-log": "requests-log",
+        "extra-route-log": "extra-route-log",
+        "payment-methods-not-received-log": "payment-methods-not-received-log",
+    }
+
+    channel_name = LOG_CHANNELS.get(log_type.value)
+    if not channel_name:
+        await interaction.response.send_message(
+            f"❌ Unknown log type: {log_type.value}",
+            ephemeral=True
+        )
+        return
+
+    # Find the channel in the guild
+    log_channel = discord.utils.get(interaction.guild.text_channels, name=channel_name)
+    if not log_channel:
+        await interaction.response.send_message(
+            f"❌ Channel #{channel_name} not found. Please create it first.",
+            ephemeral=True
+        )
+        return
+
+    # Parse date range
+    mode_value = mode.value if mode is not None else "last_7"
+    now = datetime.utcnow()
+    after_dt: Optional[datetime] = None
+    before_dt: Optional[datetime] = None
+    range_text = ""
+
+    if mode_value == "last_7":
+        after_dt = now - timedelta(days=7)
+        range_text = f"from {after_dt.date()} to now (last 7 days)"
+    elif mode_value == "last_30":
+        after_dt = now - timedelta(days=30)
+        range_text = f"from {after_dt.date()} to now (last 30 days)"
+    elif mode_value == "last_90":
+        after_dt = now - timedelta(days=90)
+        range_text = f"from {after_dt.date()} to now (last 90 days)"
+    else:
+        if not start:
+            await interaction.response.send_message(
+                "⚠️ In custom mode you must provide a start date (YYYY-MM-DD).",
+                ephemeral=True,
+            )
+            return
+        after_dt = parse_date_str(start)
+        if after_dt is None:
+            await interaction.response.send_message(
+                "⚠️ Could not parse start date. Use format YYYY-MM-DD.",
+                ephemeral=True,
+            )
+            return
+        if end:
+            before_dt = parse_date_str(end)
+            if before_dt is None:
+                await interaction.response.send_message(
+                    "⚠️ Could not parse end date. Use format YYYY-MM-DD.",
+                    ephemeral=True,
+                )
+                return
+            range_text = f"from {after_dt.date()} to {before_dt.date()}"
+        else:
+            range_text = f"from {after_dt.date()} onward"
+
+    await interaction.response.defer(ephemeral=True)
+
+    # Collect log entries
+    entries = []
+    total_scanned = 0
+
+    async for msg in log_channel.history(
+        limit=max_messages,
+        oldest_first=False,
+        after=after_dt,
+        before=before_dt,
+    ):
+        total_scanned += 1
+        # Create log entry
+        entry = {
+            "date": msg.created_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "author": msg.author.display_name,
+            "content": msg.content[:200] + ("..." if len(msg.content) > 200 else ""),
+            "message_id": msg.id,
+            "jump_url": msg.jump_url,
+        }
+        entries.append(entry)
+
+    if len(entries) == 0:
+        await interaction.followup.send(
+            f"ℹ️ No entries found in #{channel_name} ({range_text}, scanned {total_scanned} messages).",
+            ephemeral=True,
+        )
+        return
+
+    # Format as embed
+    embed = discord.Embed(
+        title=f"📋 {log_type.name}",
+        description=f"Found **{len(entries)}** entries {range_text}",
+        color=0x5865F2,
+        timestamp=discord.utils.utcnow()
+    )
+
+    # Show first 10 entries in embed
+    for entry in entries[:10]:
+        embed.add_field(
+            name=f"{entry['date']} - {entry['author']}",
+            value=f"{entry['content']}\n[Jump to message]({entry['jump_url']})",
+            inline=False
+        )
+
+    if len(entries) > 10:
+        embed.set_footer(text=f"Showing first 10 of {len(entries)} entries. Full export sent to DM.")
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+    # Send full log to DM if more than 10 entries
+    if len(entries) > 10:
+        full_report_lines = []
+        for entry in entries:
+            full_report_lines.append(
+                f"[{entry['date']}] {entry['author']}: {entry['content']}\n{entry['jump_url']}\n"
+            )
+
+        full_report = "\n".join(full_report_lines)
+
+        # Split into chunks if needed
+        chunks = []
+        remaining = full_report
+        while remaining:
+            chunk = remaining[:1900]
+            last_nl = chunk.rfind("\n\n")
+            if last_nl != -1:
+                chunk, remaining = remaining[:last_nl], remaining[last_nl + 2:]
+            else:
+                remaining = remaining[1900:]
+            chunks.append(chunk)
+
+        for chunk in chunks:
+            await interaction.user.send(f"```{chunk}```")
 
 
 # ============================================================
