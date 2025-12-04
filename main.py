@@ -31,48 +31,337 @@ PORT = int(os.environ.get('PORT', 8080))
 
 # Centralized configuration for employees and logging channels
 CONFIG: Dict[str, Any] = {
-    "employees": {
-        # Example structure. Replace IDs with real values in deployment.
-        "caleb": {
-            "discord_user_id": None,
-            "rt_channel_id": None,
-            "log_channel_id": None,
-            "campfire_channel_id": None,
-        },
-        "dakota": {
-            "discord_user_id": None,
-            "rt_channel_id": None,
-            "log_channel_id": None,
-            "campfire_channel_id": None,
-        },
+    # Special/Alert Channels
+    "special_channels": {
+        "management_alerts": 1445630201223450778,  # #🚨alerts
+        "office_alerts": 1445619376832254054,  # #📅important-alerts
+        "kb_updates": 1446269836404719737,  # #🛟resources🛟
+        "calendar_events": 1445482076693332030,  # #💥company-alerts💥
+        "policy_updates_thread": 1446270910125310092,  # 📒 Policy Updates thread
+        "company_chat": 1445075784309145705,  # #general-company-chat
+        "watercooler": 1445482123778588733,  # #watercooler
+        "field_photos": 1445482038390947982,  # #📸field-photos📸
+        "music": 1445482157026840596,  # #🎵music🎵
+        "resources": 1446269836404719737,  # #🛟resources🛟
     },
+
+    # Global Log Channels
     "global_logs": {
-        "call_outs": None,
-        "requests": None,
-        "hours_updates": None,
-        "pending_appointments": None,
-        "tech_collections": None,
-        "vehicle_issues": None,
-        "wpi_reports": None,
+        "damages": 1446272676141334638,  # #damages-log
+        "fleet": 1446273032967426088,  # #fleet-log
+        "training": 1446273088655200416,  # #training-log
+        "safety_and_accident": 1446273177620578305,  # #safety-and-accident-log
+        "customer_feedback": 1446273287293501561,  # #customer-feedback-log
+        "tech_reminders": 1446273372001407148,  # #tech-reminders-log
+        "inventory": 1446273416708751551,  # #inventory-log
+        "office_operations": 1446273519901216889,  # #office-operations-log
+        "reports": 1446273562548899901,  # #🤖reports
+    },
+
+    # Team Channels (non-personal)
+    "team_channels": {
+        "pest_team": 1445612175161819277,
+        "pest_training": 1445613523047813211,
+        "pest_inventory": 1445613211700301915,
+        "rodent_team": 1445613873033121984,
+        "rodent_training": 1445613936945795112,
+        "rodent_inventory": 1445614073705271337,
+        "insulation_team": 1445612683813457992,
+        "insulation_photos": 1445615997754019970,
+        "sales_team": 1445615036822196287,
+        "sales_training": 1445615276640047114,
+        "sales_resources": 1445615319455498341,
+        "tech_to_inspect": 1445614391016816681,
+    },
+
+    # Office to Tech Channels
+    "office_to_tech": {
+        "chat": 1445482310941016124,
+        "customer_feedback": 1445507404312740031,
+        "availability_calendar": 1445505875979796542,
+        "inspector_scheduling": 1445609902314750044,
+        "insulation_consult": 1445608742040240128,
+        "marketing_consult": 1445609185437028495,
+        "pest_consult": 1445609221730209947,
+        "rodent_consult": 1445609271185379386,
+        "sales_consult": 1445609305960218634,
+    },
+
+    # Office Team Channels
+    "office_team": {
+        "cubicle_chat": 1445619027580944424,  # #cubicle-loves-bryan
+        "chimkin": 1445624254837035038,
+        "afk": 1445624532948881530,
+        "office_tools": 1445624845818662932,
+        "support_resources": 1445619705883918409,
+        "important_alerts": 1445619376832254054,
+        "scheduling": 1445619506847285268,
+        # Office tools threads
+        "billing_thread": 1445651200983826493,
+        "customer_care_thread": 1445651337290322003,
+        "cube_pool_thread": 1445651386023936071,
+        "switchboard_thread": 1445651576470372432,
+        "call_log_thread": 1445651625233350747,
+    },
+
+    # Office Management Channels
+    "office_management": {
+        "manager_chat": 1445633249777946674,
+        "om_pool_thread": 1445633750430912553,
+        "smot": 1445633544948027402,
+        "think_tank": 1445633871176536217,
+        "payroll_prep": 1445635472369123328,
+        "document_sharing": 1445634481053765652,
+        "account_logins": 1445635985034448906,
+    },
+
+    # Management Team Channels
+    "management": {
+        "manager_chat": 1445511267166060616,
+        "manager_resources": 1445630429439852766,
+        "alerts": 1445630201223450778,
+        "tuesday_meeting_notes": 1445629877297614978,
+    },
+
+    # Employee Personal Channels (Round Table channels + Campfire)
+    "employees": {
+        # Technicians
+        "caleb_lee": {
+            "rt_channel_id": 1445468249318883471,
+            "rt_thread_id": 1445471138338574628,
+            "campfire_channel_id": 1445477280112705617,
+        },
+        "charles_swanier": {
+            "rt_channel_id": 1445468304113139754,
+            "rt_thread_id": 1445471186057302117,
+            "campfire_channel_id": 1445477492159938641,
+        },
+        "cole_heflin": {
+            "rt_channel_id": 1445468381976465571,
+            "rt_thread_id": 1445475061073973429,
+            "campfire_channel_id": 1445477529543643330,
+        },
+        "dahyla_luna": {
+            "rt_channel_id": 1445468429787070647,
+            "rt_thread_id": 1445475094276083712,
+            "campfire_channel_id": 1445477555972083762,
+        },
+        "devin_williams": {
+            "rt_channel_id": 1445468507713179851,
+            "rt_thread_id": 1445475146797289565,
+            "campfire_channel_id": 1445477612402118806,
+        },
+        "dylan_weeks": {
+            "rt_channel_id": 1445468910353776650,
+            "rt_thread_id": 1445475175410962432,
+            "campfire_channel_id": 1445477636020244680,
+        },
+        "edward_leija": {
+            "rt_channel_id": 1445468935527993555,
+            "rt_thread_id": 1445475216665870346,
+            "campfire_channel_id": 1445477661861482526,
+        },
+        "fernando_chairez": {
+            "rt_channel_id": 1445468981371863194,
+            "rt_thread_id": 1445475247452192992,
+            "campfire_channel_id": 1445477702827114660,
+        },
+        "hector_bermudez": {
+            "rt_channel_id": 1445469026389069926,
+            "rt_thread_id": 1445475276409540691,
+            "campfire_channel_id": 1445477732153688245,
+        },
+        "isiac_ramirez": {
+            "rt_channel_id": 1445469063957450783,
+            "rt_thread_id": 1445475303471321118,
+            "campfire_channel_id": 1445477769252180029,
+        },
+        "jose_flores": {
+            "rt_channel_id": 1445469181947547768,
+            "rt_thread_id": 1445475390821896252,
+            "campfire_channel_id": 1445477875787628706,
+        },
+        "logan_bean": {
+            "rt_channel_id": 1445469216781373662,
+            "rt_thread_id": 1445475414444212225,
+            "campfire_channel_id": 1445477946818170993,
+        },
+        "matt_kiger": {
+            "rt_channel_id": 1445469256161431663,
+            "rt_thread_id": 1445475436531421349,
+            "campfire_channel_id": 1445477982750769232,
+        },
+        "nathaniel_de_leon": {
+            "rt_channel_id": 1445469288923271320,
+            "rt_thread_id": 1445475465572651028,
+            "campfire_channel_id": 1445478014879272981,
+        },
+        "rafael_flores": {
+            "rt_channel_id": 1445469367948021830,
+            "rt_thread_id": 1445475516428587109,
+            "campfire_channel_id": 1445478175185305814,
+        },
+        "raymond_flores": {
+            "rt_channel_id": 1445469419781357598,
+            "rt_thread_id": 1445475546296357028,
+            "campfire_channel_id": 1445478212120481974,
+        },
+        "ric_brown": {
+            "rt_channel_id": 1445469464207294524,
+            "rt_thread_id": 1445475577199853579,
+            "campfire_channel_id": 1445478254034161787,
+        },
+        "ryan_mcguire": {
+            "rt_channel_id": 1445469505881899092,
+            "rt_thread_id": 1445475604945440799,
+            "campfire_channel_id": 1445478292961493142,
+        },
+        "ryan_poole": {
+            "rt_channel_id": 1445469540304683028,
+            "rt_thread_id": 1445475625908306073,
+            "campfire_channel_id": 1445478329623908578,
+        },
+        "sam_hancock": {
+            "rt_channel_id": 1445469574672683251,
+            "rt_thread_id": 1445475652169105619,
+            "campfire_channel_id": 1445478370459779092,
+        },
+        "tony_rodriguez": {
+            "rt_channel_id": 1445469608311259269,
+            "rt_thread_id": 1445475674197459126,
+            "campfire_channel_id": 1445478571652026562,
+        },
+        "trevor_bell": {
+            "rt_channel_id": 1445469642905882736,
+            "rt_thread_id": 1445475702336917576,
+            "campfire_channel_id": 1445478600324284416,
+        },
+        "tyler_brown": {
+            "rt_channel_id": 1445469676929945700,
+            "rt_thread_id": 1445475736562569410,
+            "campfire_channel_id": 1445478632381218877,
+        },
+
+        # Office Staff
+        "araceli_lee": {
+            "rt_channel_id": 1445469725709828278,
+            "rt_thread_id": 1445473275365822496,
+            "office_notes_thread": 1445473873008267404,
+            "campfire_channel_id": 1445477103666729112,
+        },
+        "amanda_stevenson": {
+            "rt_channel_id": 1445469774837715067,
+            "rt_thread_id": 1445473374401855659,
+            "office_notes_thread": 1445473948010807326,
+            "campfire_channel_id": 1445477158054138027,
+        },
+        "rachel_sweet": {
+            "rt_channel_id": 1445469889933479947,
+            "rt_thread_id": 1445473519604596787,
+            "office_notes_thread": 1445474268589850654,
+            "campfire_channel_id": 1445478136300179588,
+        },
+        "sean_richter": {
+            "rt_channel_id": 1445469919750918295,
+            "rt_thread_id": 1445473549136433245,
+            "office_notes_thread": 1445474401788362895,
+            "campfire_channel_id": 1445478399236768008,
+        },
+        "summer_geer": {
+            "rt_channel_id": 1445469946753581168,
+            "rt_thread_id": 1445473579335680061,
+            "office_notes_thread": 1445474502887735407,
+            "campfire_channel_id": 1445478435668496414,
+        },
+        "terry_sabin": {
+            "rt_channel_id": 1445469973039288342,
+            "rt_thread_id": 1445473611833016350,
+            "office_notes_thread": 1445474552636244131,
+            "campfire_channel_id": 1445478534200950865,
+        },
+
+        # Managers
+        "adam_wilmes": {
+            "rt_channel_id": 1445468158189109279,
+            "rt_thread_id": 1445470890811719811,
+            "todo_thread_id": 1445629515656204318,
+            "campfire_channel_id": 1445477055633424415,
+        },
+        "dakota_colburn": {
+            "rt_channel_id": 1445468473286463609,
+            "rt_thread_id": 1445475119224062114,
+            "todo_thread_id": 1445629457976135744,
+            "campfire_channel_id": 1445477586716328028,
+        },
+        "jeff_kirkham": {
+            "rt_channel_id": 1445469096194998282,
+            "rt_thread_id": 1445475333032771666,
+            "todo_thread_id": 1445629333782925362,
+            "campfire_channel_id": 1445477805562400919,
+        },
+        "joey_heminger": {
+            "rt_channel_id": 1445469136246276097,
+            "rt_thread_id": 1445475366788530389,
+            "todo_thread_id": 1445629280267538552,
+            "campfire_channel_id": 1445477838344949883,
+        },
+        "preston_wagner": {
+            "rt_channel_id": 1445469323765223474,
+            "rt_thread_id": 1445475490017181780,
+            "todo_thread_id": 1445629238173765744,
+            "campfire_channel_id": 1445478097397874932,
+        },
+        "ash_streeter": {
+            "rt_channel_id": 1445469803551916083,
+            "rt_thread_id": 1445473413861871688,
+            "office_notes_thread": 1445474037965783110,
+            "todo_thread_id": 1445629184096337981,
+            "campfire_channel_id": 1445477206930358442,
+        },
+        "lauren_ledyard": {
+            "rt_channel_id": 1445469830848184320,
+            "rt_thread_id": 1445473438578774088,
+            "office_notes_thread": 1445545433651744828,
+            "todo_thread_id": 1445629050918928404,
+            "campfire_channel_id": 1445477908666908845,
+        },
+        "presley_mcentee": {
+            "rt_channel_id": 1445469860422357044,
+            "rt_thread_id": 1445473486188449959,
+            "office_notes_thread": 1445474204345438420,
+            "todo_thread_id": 1445629114953367565,
+            "campfire_channel_id": 1445478048513134804,
+        },
     },
 }
 
 
-def get_employee_by_log_channel(channel_id: int) -> Optional[str]:
-    for key, data in CONFIG.get("employees", {}).items():
-        if data.get("log_channel_id") == channel_id:
-            return key
-    return None
-
-
 def get_employee_by_rt_channel(channel_id: int) -> Optional[str]:
+    """Get employee key by their Round Table channel ID"""
     for key, data in CONFIG.get("employees", {}).items():
         if data.get("rt_channel_id") == channel_id:
             return key
     return None
 
 
+def get_employee_by_rt_thread(thread_id: int) -> Optional[str]:
+    """Get employee key by their Round Table thread ID"""
+    for key, data in CONFIG.get("employees", {}).items():
+        if data.get("rt_thread_id") == thread_id:
+            return key
+    return None
+
+
+def get_employee_by_campfire(channel_id: int) -> Optional[str]:
+    """Get employee key by their Campfire channel ID"""
+    for key, data in CONFIG.get("employees", {}).items():
+        if data.get("campfire_channel_id") == channel_id:
+            return key
+    return None
+
+
 def get_employee_by_user_id(user_id: int) -> Optional[str]:
+    """Get employee key by their Discord user ID (requires discord_user_id in CONFIG)"""
     for key, data in CONFIG.get("employees", {}).items():
         if data.get("discord_user_id") == user_id:
             return key
@@ -87,18 +376,18 @@ async def log_event(
     fields: Dict[str, str],
     global_log_key: str,
 ):
-    """Send a structured embed to the global log channel and a marker to the employee log channel."""
+    """Send a structured embed to the global log channel and optionally to employee's RT channel."""
 
     employee_info = CONFIG.get("employees", {}).get(employee_key)
     if not employee_info:
         return
 
     global_channel_id = CONFIG.get("global_logs", {}).get(global_log_key)
-    log_channel_id = employee_info.get("log_channel_id")
+    rt_channel_id = employee_info.get("rt_channel_id")
     user_id = employee_info.get("discord_user_id")
 
-    employee_mention = f"<@{user_id}>" if user_id else employee_key.title()
-    log_channel_ref = f"<#{log_channel_id}>" if log_channel_id else "Employee Log"
+    employee_mention = f"<@{user_id}>" if user_id else employee_key.replace("_", " ").title()
+    rt_channel_ref = f"<#{rt_channel_id}>" if rt_channel_id else "Round Table"
 
     # Global embed
     if global_channel_id:
@@ -107,16 +396,16 @@ async def log_event(
             embed = discord.Embed(title=title, color=discord.Color.blue())
             embed.add_field(name="Employee", value=employee_mention, inline=True)
             embed.add_field(name="Type", value=event_type, inline=True)
-            embed.add_field(name="Employee Log", value=log_channel_ref, inline=True)
+            embed.add_field(name="Employee Channel", value=rt_channel_ref, inline=True)
             for field_name, value in fields.items():
                 embed.add_field(name=field_name, value=value or "N/A", inline=False)
             embed.add_field(name="Status", value="Pending", inline=True)
             embed.timestamp = discord.utils.utcnow()
             await channel.send(embed=embed)
 
-    # Employee marker
-    if log_channel_id:
-        marker_channel = bot.get_channel(int(log_channel_id))
+    # Optional: Send marker to employee's Round Table channel
+    if rt_channel_id:
+        marker_channel = bot.get_channel(int(rt_channel_id))
         if marker_channel:
             marker_parts = [f"📌 {title}"]
             detail_parts = [f"{k}: {v}" for k, v in fields.items() if v]
