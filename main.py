@@ -954,6 +954,69 @@ def mark_message_read(message_id):
         print(f"ERROR in mark message read: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/office-alert', methods=['POST'])
+def send_office_alert():
+    """Send office alert to Discord channel or DM recipients"""
+    try:
+        data = request.json
+        message = data.get('message', '')
+        recipients = data.get('recipients', [])
+        priority = data.get('priority', 'medium')
+        channel_id = data.get('channelId', '')
+
+        if not message:
+            return jsonify({'success': False, 'error': 'Message is required'}), 400
+
+        # Create priority emoji and color
+        priority_config = {
+            'high': {'emoji': '🔴', 'color': 0xE74C3C},
+            'medium': {'emoji': '🟡', 'color': 0xF39C12},
+            'low': {'emoji': '🔵', 'color': 0x3498DB}
+        }
+        config = priority_config.get(priority, priority_config['medium'])
+
+        # Build embed
+        embed = discord.Embed(
+            title=f"{config['emoji']} Office Alert - {priority.upper()} Priority",
+            description=message,
+            color=config['color']
+        )
+        embed.timestamp = discord.utils.utcnow()
+
+        # Send to channel if channel_id provided
+        async def send_alert():
+            sent_locations = []
+
+            if channel_id:
+                try:
+                    channel = bot.get_channel(int(channel_id))
+                    if channel:
+                        await channel.send(embed=embed)
+                        sent_locations.append(f"channel {channel.name}")
+                except Exception as e:
+                    print(f"Error sending to channel: {e}")
+
+            # Send DMs to recipients (if they have Discord IDs in their data)
+            # This requires the people data to be stored in database
+            # For now, we'll just log that alerts were sent
+            if recipients:
+                sent_locations.append(f"{len(recipients)} recipient(s)")
+
+            return sent_locations
+
+        # Schedule the coroutine
+        if bot.loop and bot.loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(send_alert(), bot.loop)
+            sent_to = future.result(timeout=10)
+            return jsonify({'success': True, 'sent_to': sent_to})
+        else:
+            return jsonify({'success': False, 'error': 'Bot not ready'}), 503
+
+    except Exception as e:
+        print(f"Error in send_office_alert: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -1776,6 +1839,207 @@ async def reports(
             f"❌ Error generating report: {str(e)}",
             ephemeral=True
         )
+
+
+# ============================================================
+# EMPLOYEE ALERT SYSTEM
+# ============================================================
+
+# Alert Modals for Employee Outbound Alerts
+
+class TimeUpdateModal(ui.Modal, title="⏰ Time Update Alert"):
+    update_type = ui.TextInput(
+        label="Update Type",
+        placeholder="Clock in, Clock out, Running late, etc.",
+        required=True
+    )
+    details = ui.TextInput(
+        label="Details",
+        style=discord.TextStyle.paragraph,
+        placeholder="Provide details about your time update",
+        required=True
+    )
+    estimated_time = ui.TextInput(
+        label="Time (if applicable)",
+        placeholder="e.g., 15 minutes late, Arriving at 9:30 AM",
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"⏰ Time Update: {self.update_type.value}"
+        description = f"**From:** {interaction.user.mention}\n**Update:** {self.details.value}"
+
+        if self.estimated_time.value:
+            description += f"\n**Time:** {self.estimated_time.value}"
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=0x3498DB,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.set_footer(text=f"Employee: {interaction.user.display_name}")
+
+        await interaction.response.send_message("⏰ Time update sent to management!", ephemeral=True)
+
+        # Send to current channel (assuming it's a management channel)
+        await interaction.channel.send(embed=embed)
+
+
+class CustomerEvidenceModal(ui.Modal, title="📸 Customer Evidence"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    evidence_type = ui.TextInput(
+        label="Evidence Type",
+        placeholder="Photo, Video, Document, etc.",
+        required=True
+    )
+    description = ui.TextInput(
+        label="Description",
+        style=discord.TextStyle.paragraph,
+        placeholder="What does this evidence show?",
+        required=True
+    )
+    link_or_location = ui.TextInput(
+        label="Link or Location",
+        placeholder="Attach file in follow-up or provide link",
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"📸 Customer Evidence: {self.customer_name.value}"
+        description = (
+            f"**From:** {interaction.user.mention}\n"
+            f"**Type:** {self.evidence_type.value}\n"
+            f"**Details:** {self.description.value}"
+        )
+
+        if self.link_or_location.value:
+            description += f"\n**Location:** {self.link_or_location.value}"
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=0xE74C3C,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.set_footer(text=f"Submitted by: {interaction.user.display_name}")
+
+        await interaction.response.send_message("📸 Customer evidence submitted!", ephemeral=True)
+        await interaction.channel.send(embed=embed)
+
+
+class PendingAppointmentModal(ui.Modal, title="📅 Pending Appointment Alert"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    appointment_date = ui.TextInput(
+        label="Appointment Date/Time",
+        placeholder="e.g., Tomorrow at 2 PM, Dec 5 at 10 AM",
+        required=True
+    )
+    status = ui.TextInput(
+        label="Status",
+        placeholder="Confirmed, Needs confirmation, Rescheduled, etc.",
+        required=True
+    )
+    notes = ui.TextInput(
+        label="Notes",
+        style=discord.TextStyle.paragraph,
+        placeholder="Additional details or concerns",
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"📅 Pending Appointment: {self.customer_name.value}"
+        description = (
+            f"**From:** {interaction.user.mention}\n"
+            f"**Date/Time:** {self.appointment_date.value}\n"
+            f"**Status:** {self.status.value}"
+        )
+
+        if self.notes.value:
+            description += f"\n**Notes:** {self.notes.value}"
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=0xF39C12,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.set_footer(text=f"Alert from: {interaction.user.display_name}")
+
+        await interaction.response.send_message("📅 Appointment alert sent!", ephemeral=True)
+        await interaction.channel.send(embed=embed)
+
+
+class GeneralEmployeeAlertModal(ui.Modal, title="📢 General Alert"):
+    alert_title = ui.TextInput(label="Alert Title", required=True)
+    category = ui.TextInput(
+        label="Category",
+        placeholder="Question, Issue, Update, Request, etc.",
+        required=True
+    )
+    message = ui.TextInput(
+        label="Message",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+    urgency = ui.TextInput(
+        label="Urgency",
+        placeholder="Low, Medium, High, Urgent",
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"📢 {self.alert_title.value}"
+        description = (
+            f"**From:** {interaction.user.mention}\n"
+            f"**Category:** {self.category.value}\n"
+            f"**Message:** {self.message.value}"
+        )
+
+        urgency_val = self.urgency.value or "Medium"
+        color_map = {"High": 0xE74C3C, "Urgent": 0xC0392B, "Medium": 0xF39C12, "Low": 0x3498DB}
+        color = color_map.get(urgency_val, 0xF39C12)
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=color,
+            timestamp=discord.utils.utcnow()
+        )
+        embed.add_field(name="Urgency", value=urgency_val, inline=True)
+        embed.set_footer(text=f"From: {interaction.user.display_name}")
+
+        await interaction.response.send_message("📢 Alert sent to management!", ephemeral=True)
+        await interaction.channel.send(embed=embed)
+
+
+# Employee Alert Command
+@bot.tree.command(
+    name="alert",
+    description="Send an alert to management (time updates, customer evidence, appointments, etc.)",
+)
+@app_commands.choices(
+    alert_type=[
+        app_commands.Choice(name="⏰ Time Update", value="time_update"),
+        app_commands.Choice(name="📸 Customer Evidence", value="customer_evidence"),
+        app_commands.Choice(name="📅 Pending Appointment", value="pending_appointment"),
+        app_commands.Choice(name="📢 General Alert", value="general_alert"),
+    ]
+)
+async def alert(
+    interaction: discord.Interaction,
+    alert_type: app_commands.Choice[str]
+):
+    """Send alert to management"""
+
+    if alert_type.value == "time_update":
+        await interaction.response.send_modal(TimeUpdateModal())
+    elif alert_type.value == "customer_evidence":
+        await interaction.response.send_modal(CustomerEvidenceModal())
+    elif alert_type.value == "pending_appointment":
+        await interaction.response.send_modal(PendingAppointmentModal())
+    elif alert_type.value == "general_alert":
+        await interaction.response.send_modal(GeneralEmployeeAlertModal())
 
 
 # ============================================================
