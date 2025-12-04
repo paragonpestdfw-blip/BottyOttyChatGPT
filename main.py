@@ -2917,6 +2917,102 @@ class ReportsSelect(ui.Select):
         await interaction.response.send_modal(IncidentModal(selection, incident_type))
 
 
+class OfficeTeamSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="ATS IT Issue", emoji="💻", description="ATS system problems"),
+            discord.SelectOption(label="Shift Cover", emoji="🔄", description="Request shift coverage"),
+            discord.SelectOption(label="FR IT Issue", emoji="⚙️", description="FieldRoutes technical issues"),
+            discord.SelectOption(label="Recruitment", emoji="👥", description="Hiring request"),
+            discord.SelectOption(label="Pending Cancellation", emoji="⚠️", description="Log customer cancellation"),
+        ]
+        super().__init__(
+            placeholder="Office Team Operations",
+            options=options,
+            min_values=1,
+            max_values=1,
+            custom_id="office_team_select",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+
+        if selection == "ATS IT Issue":
+            await interaction.response.send_modal(ATSITIssueModal())
+        elif selection == "Shift Cover":
+            await interaction.response.send_modal(ShiftCoverModal())
+        elif selection == "FR IT Issue":
+            await interaction.response.send_modal(FRITIssueModal())
+        elif selection == "Recruitment":
+            await interaction.response.send_modal(RecruitmentModal())
+        elif selection == "Pending Cancellation":
+            await interaction.response.send_modal(PendingCancellationModal())
+
+
+class MoveUpSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Pest Job Move-Up", emoji="🪲", description="Add to pest move-up list"),
+            discord.SelectOption(label="Rodent Job Move-Up", emoji="🐀", description="Add to rodent move-up list"),
+            discord.SelectOption(label="Insulation Job Move-Up", emoji="💩", description="Add to insulation move-up list"),
+            discord.SelectOption(label="Sales Inspection Move-Up", emoji="🤑", description="Add to sales move-up list"),
+            discord.SelectOption(label="Termite Job Move-Up", emoji="🐜", description="Add to termite move-up list"),
+        ]
+        super().__init__(
+            placeholder="Job Move-Ups",
+            options=options,
+            min_values=1,
+            max_values=1,
+            custom_id="move_up_select",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+
+        if selection == "Pest Job Move-Up":
+            await interaction.response.send_modal(PestMoveUpModal())
+        elif selection == "Rodent Job Move-Up":
+            await interaction.response.send_modal(RodentMoveUpModal())
+        elif selection == "Insulation Job Move-Up":
+            await interaction.response.send_modal(InsulationMoveUpModal())
+        elif selection == "Sales Inspection Move-Up":
+            await interaction.response.send_modal(SalesMoveUpModal())
+        elif selection == "Termite Job Move-Up":
+            await interaction.response.send_modal(TermiteMoveUpModal())
+
+
+class ManagementSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Weekly Reservice Report", emoji="📊", description="Submit weekly reserves stats"),
+            discord.SelectOption(label="Manager Password", emoji="🔐", description="Store system password"),
+            discord.SelectOption(label="Meeting Notes", emoji="📝", description="Record meeting outcomes"),
+            discord.SelectOption(label="Manager Document", emoji="📄", description="Add important doc"),
+            discord.SelectOption(label="Manager Tutorial", emoji="🎓", description="Create how-to guide"),
+        ]
+        super().__init__(
+            placeholder="Management Tools",
+            options=options,
+            min_values=1,
+            max_values=1,
+            custom_id="management_select",
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+
+        if selection == "Weekly Reservice Report":
+            await interaction.response.send_modal(WeeklyReserviceModal())
+        elif selection == "Manager Password":
+            await interaction.response.send_modal(ManagerPasswordModal())
+        elif selection == "Meeting Notes":
+            await interaction.response.send_modal(MeetingNotesModal())
+        elif selection == "Manager Document":
+            await interaction.response.send_modal(ManagerDocModal())
+        elif selection == "Manager Tutorial":
+            await interaction.response.send_modal(ManagerTutorialModal())
+
+
 class RequestPanelView(ui.View):
     def __init__(self):
         super().__init__(timeout=None)
