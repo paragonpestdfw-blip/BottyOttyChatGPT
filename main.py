@@ -2263,6 +2263,245 @@ class CampfireEscalationModal(ui.Modal, title="Escalate to Campfire"):
         await interaction.response.send_message("Escalation sent to Campfire.", ephemeral=True)
 
 
+# ============================================================
+# OFFICE TEAM MODALS
+# ============================================================
+
+class ATSITIssueModal(ui.Modal, title="ATS IT Issue"):
+    issue_type = ui.TextInput(
+        label="Issue Type",
+        placeholder="Login, Access, Data, Performance, Other",
+        required=True
+    )
+    description = ui.TextInput(
+        label="Description",
+        placeholder="Describe the issue in detail...",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+    urgency = ui.TextInput(
+        label="Urgency",
+        placeholder="Low / Medium / High / Critical",
+        required=True
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"ATS IT Issue: {self.issue_type.value}"
+        description = f"Type: {self.issue_type.value}\nUrgency: {self.urgency.value}\nDescription: {self.description.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='office-team',
+            category='ATS IT',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"✅ ATS IT Issue #{task_number}", color=0xFF6B6B)
+        embed.add_field(name="Type", value=self.issue_type.value, inline=True)
+        embed.add_field(name="Urgency", value=self.urgency.value, inline=True)
+        embed.add_field(name="Description", value=self.description.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("✅ ATS IT Issue submitted!", embed=embed)
+
+
+class ShiftCoverModal(ui.Modal, title="Shift Cover Request"):
+    date = ui.TextInput(
+        label="Date Needed",
+        placeholder="YYYY-MM-DD",
+        required=True
+    )
+    time = ui.TextInput(
+        label="Time / Shift",
+        placeholder="e.g., 8am-5pm, Morning Shift, etc.",
+        required=True
+    )
+    reason = ui.TextInput(
+        label="Reason",
+        placeholder="PTO, Sick, Emergency, etc.",
+        required=True
+    )
+    notes = ui.TextInput(
+        label="Additional Notes (optional)",
+        style=discord.TextStyle.paragraph,
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Shift Cover: {self.date.value} - {self.time.value}"
+        description = f"Date: {self.date.value}\nTime: {self.time.value}\nReason: {self.reason.value}"
+        if self.notes.value:
+            description += f"\nNotes: {self.notes.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='office-team',
+            category='Shift Cover',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"✅ Shift Cover Request #{task_number}", color=0x4ECDC4)
+        embed.add_field(name="Date", value=self.date.value, inline=True)
+        embed.add_field(name="Time", value=self.time.value, inline=True)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("✅ Shift cover request submitted!", embed=embed)
+
+
+class FRITIssueModal(ui.Modal, title="FR IT Issue"):
+    system = ui.TextInput(
+        label="System/Software",
+        placeholder="FieldRoutes, Module, Integration, etc.",
+        required=True
+    )
+    issue = ui.TextInput(
+        label="Issue Description",
+        placeholder="Describe what's not working...",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+    impact = ui.TextInput(
+        label="Business Impact",
+        placeholder="Who is affected? How urgent?",
+        required=True
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"FR IT Issue: {self.system.value}"
+        description = f"System: {self.system.value}\nImpact: {self.impact.value}\nIssue: {self.issue.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='office-team',
+            category='FR IT',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"✅ FR IT Issue #{task_number}", color=0xF7B731)
+        embed.add_field(name="System", value=self.system.value, inline=True)
+        embed.add_field(name="Impact", value=self.impact.value, inline=True)
+        embed.add_field(name="Issue", value=self.issue.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("✅ FR IT Issue submitted!", embed=embed)
+
+
+class RecruitmentModal(ui.Modal, title="Recruitment Request"):
+    position = ui.TextInput(
+        label="Position",
+        placeholder="Role/Title to hire for",
+        required=True
+    )
+    department = ui.TextInput(
+        label="Department",
+        placeholder="Pest, Rodent, Sales, Office, etc.",
+        required=True
+    )
+    urgency = ui.TextInput(
+        label="Urgency",
+        placeholder="ASAP / Within 2 weeks / Within month / Not urgent",
+        required=True
+    )
+    details = ui.TextInput(
+        label="Additional Details",
+        placeholder="Requirements, skills, experience, etc.",
+        style=discord.TextStyle.paragraph,
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Recruitment: {self.position.value} - {self.department.value}"
+        description = f"Position: {self.position.value}\nDepartment: {self.department.value}\nUrgency: {self.urgency.value}"
+        if self.details.value:
+            description += f"\nDetails: {self.details.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='office-team',
+            category='Recruitment',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"✅ Recruitment Request #{task_number}", color=0x5F27CD)
+        embed.add_field(name="Position", value=self.position.value, inline=True)
+        embed.add_field(name="Department", value=self.department.value, inline=True)
+        embed.add_field(name="Urgency", value=self.urgency.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("✅ Recruitment request submitted!", embed=embed)
+
+
+class PendingCancellationModal(ui.Modal, title="Pending Cancellation"):
+    customer_name = ui.TextInput(
+        label="Customer Name",
+        placeholder="Full name",
+        required=True
+    )
+    account_number = ui.TextInput(
+        label="Account Number",
+        placeholder="FR account #",
+        required=False
+    )
+    reason = ui.TextInput(
+        label="Cancellation Reason",
+        placeholder="Price, moving, service issues, etc.",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+    retention_notes = ui.TextInput(
+        label="Retention Attempts",
+        placeholder="What was offered? Any chance to save?",
+        style=discord.TextStyle.paragraph,
+        required=False
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Pending Cancellation: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}"
+        if self.account_number.value:
+            description += f"\nAccount: {self.account_number.value}"
+        description += f"\nReason: {self.reason.value}"
+        if self.retention_notes.value:
+            description += f"\nRetention Notes: {self.retention_notes.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='office-team',
+            category='Pending Cancellation',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"⚠️ Pending Cancellation #{task_number}", color=0xEE5A6F)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        if self.account_number.value:
+            embed.add_field(name="Account", value=self.account_number.value, inline=True)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("⚠️ Pending cancellation logged!", embed=embed)
+
+
 class RequestsSelect(ui.Select):
     def __init__(self):
         options = [
