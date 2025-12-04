@@ -2502,6 +2502,175 @@ class PendingCancellationModal(ui.Modal, title="Pending Cancellation"):
         await interaction.response.send_message("⚠️ Pending cancellation logged!", embed=embed)
 
 
+# ============================================================
+# MOVE-UP TRACKING MODALS
+# ============================================================
+
+class PestMoveUpModal(ui.Modal, title="🪲 Pest Job Move-Up"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    phone = ui.TextInput(label="Phone Number", required=True)
+    address = ui.TextInput(label="Address", style=discord.TextStyle.paragraph, required=True)
+    reason = ui.TextInput(label="Reason for Move-Up", placeholder="Cancellation, infestation, complaint, etc.", required=True)
+    priority = ui.TextInput(label="Priority", placeholder="High / Medium / Low", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Pest Move-Up: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}\nPhone: {self.phone.value}\nAddress: {self.address.value}\nReason: {self.reason.value}\nPriority: {self.priority.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='move-up',
+            category='Pest',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🪲 Pest Move-Up #{task_number}", color=0x00D2FF)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        embed.add_field(name="Phone", value=self.phone.value, inline=True)
+        embed.add_field(name="Priority", value=self.priority.value, inline=True)
+        embed.add_field(name="Address", value=self.address.value, inline=False)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🪲 Pest move-up added!", embed=embed)
+
+
+class RodentMoveUpModal(ui.Modal, title="🐀 Rodent Job Move-Up"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    phone = ui.TextInput(label="Phone Number", required=True)
+    address = ui.TextInput(label="Address", style=discord.TextStyle.paragraph, required=True)
+    reason = ui.TextInput(label="Reason for Move-Up", placeholder="Cancellation, infestation, complaint, etc.", required=True)
+    priority = ui.TextInput(label="Priority", placeholder="High / Medium / Low", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Rodent Move-Up: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}\nPhone: {self.phone.value}\nAddress: {self.address.value}\nReason: {self.reason.value}\nPriority: {self.priority.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='move-up',
+            category='Rodent',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🐀 Rodent Move-Up #{task_number}", color=0x8B4513)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        embed.add_field(name="Phone", value=self.phone.value, inline=True)
+        embed.add_field(name="Priority", value=self.priority.value, inline=True)
+        embed.add_field(name="Address", value=self.address.value, inline=False)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🐀 Rodent move-up added!", embed=embed)
+
+
+class InsulationMoveUpModal(ui.Modal, title="💩 Insulation Job Move-Up"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    phone = ui.TextInput(label="Phone Number", required=True)
+    address = ui.TextInput(label="Address", style=discord.TextStyle.paragraph, required=True)
+    reason = ui.TextInput(label="Reason for Move-Up", placeholder="Cancellation, urgent need, complaint, etc.", required=True)
+    priority = ui.TextInput(label="Priority", placeholder="High / Medium / Low", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Insulation Move-Up: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}\nPhone: {self.phone.value}\nAddress: {self.address.value}\nReason: {self.reason.value}\nPriority: {self.priority.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='move-up',
+            category='Insulation',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"💩 Insulation Move-Up #{task_number}", color=0xFFD700)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        embed.add_field(name="Phone", value=self.phone.value, inline=True)
+        embed.add_field(name="Priority", value=self.priority.value, inline=True)
+        embed.add_field(name="Address", value=self.address.value, inline=False)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("💩 Insulation move-up added!", embed=embed)
+
+
+class SalesMoveUpModal(ui.Modal, title="🤑 Sales Inspection Move-Up"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    phone = ui.TextInput(label="Phone Number", required=True)
+    address = ui.TextInput(label="Address", style=discord.TextStyle.paragraph, required=True)
+    reason = ui.TextInput(label="Reason for Move-Up", placeholder="Hot lead, competitor threat, urgent need, etc.", required=True)
+    priority = ui.TextInput(label="Priority", placeholder="High / Medium / Low", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Sales Move-Up: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}\nPhone: {self.phone.value}\nAddress: {self.address.value}\nReason: {self.reason.value}\nPriority: {self.priority.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='move-up',
+            category='Sales',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🤑 Sales Move-Up #{task_number}", color=0x2ECC71)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        embed.add_field(name="Phone", value=self.phone.value, inline=True)
+        embed.add_field(name="Priority", value=self.priority.value, inline=True)
+        embed.add_field(name="Address", value=self.address.value, inline=False)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🤑 Sales move-up added!", embed=embed)
+
+
+class TermiteMoveUpModal(ui.Modal, title="🐜 Termite Job Move-Up"):
+    customer_name = ui.TextInput(label="Customer Name", required=True)
+    phone = ui.TextInput(label="Phone Number", required=True)
+    address = ui.TextInput(label="Address", style=discord.TextStyle.paragraph, required=True)
+    reason = ui.TextInput(label="Reason for Move-Up", placeholder="Active infestation, damage, urgent, etc.", required=True)
+    priority = ui.TextInput(label="Priority", placeholder="High / Medium / Low", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        title = f"Termite Move-Up: {self.customer_name.value}"
+        description = f"Customer: {self.customer_name.value}\nPhone: {self.phone.value}\nAddress: {self.address.value}\nReason: {self.reason.value}\nPriority: {self.priority.value}"
+
+        task_number = add_task(
+            title=title,
+            description=description,
+            created_by=interaction.user.display_name,
+            created_by_id=interaction.user.id,
+            task_type='move-up',
+            category='Termite',
+            channel_id=interaction.channel_id
+        )
+
+        embed = discord.Embed(title=f"🐜 Termite Move-Up #{task_number}", color=0xE74C3C)
+        embed.add_field(name="Customer", value=self.customer_name.value, inline=True)
+        embed.add_field(name="Phone", value=self.phone.value, inline=True)
+        embed.add_field(name="Priority", value=self.priority.value, inline=True)
+        embed.add_field(name="Address", value=self.address.value, inline=False)
+        embed.add_field(name="Reason", value=self.reason.value, inline=False)
+        embed.set_footer(text=f"Added by {interaction.user.display_name}")
+        embed.timestamp = discord.utils.utcnow()
+
+        await interaction.response.send_message("🐜 Termite move-up added!", embed=embed)
+
+
 class RequestsSelect(ui.Select):
     def __init__(self):
         options = [
