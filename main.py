@@ -127,116 +127,139 @@ CONFIG: Dict[str, Any] = {
     "employees": {
         # Technicians
         "caleb_lee": {
+            "discord_user_id": 423987581483483146,
             "rt_channel_id": 1445468249318883471,
             "rt_thread_id": 1445471138338574628,
             "campfire_channel_id": 1445477280112705617,
         },
         "charles_swanier": {
+            "discord_user_id": 262990512506667009,
             "rt_channel_id": 1445468304113139754,
             "rt_thread_id": 1445471186057302117,
             "campfire_channel_id": 1445477492159938641,
         },
         "cole_heflin": {
+            "discord_user_id": 1317654177412939799,
             "rt_channel_id": 1445468381976465571,
             "rt_thread_id": 1445475061073973429,
             "campfire_channel_id": 1445477529543643330,
         },
         "dahyla_luna": {
+            "discord_user_id": 367146081248608257,
             "rt_channel_id": 1445468429787070647,
             "rt_thread_id": 1445475094276083712,
             "campfire_channel_id": 1445477555972083762,
         },
         "devin_williams": {
+            "discord_user_id": 680757425514479662,
             "rt_channel_id": 1445468507713179851,
             "rt_thread_id": 1445475146797289565,
             "campfire_channel_id": 1445477612402118806,
         },
         "dylan_weeks": {
+            "discord_user_id": 1229532562200723556,
             "rt_channel_id": 1445468910353776650,
             "rt_thread_id": 1445475175410962432,
             "campfire_channel_id": 1445477636020244680,
         },
         "edward_leija": {
+            "discord_user_id": 1277407641479548928,
             "rt_channel_id": 1445468935527993555,
             "rt_thread_id": 1445475216665870346,
             "campfire_channel_id": 1445477661861482526,
         },
         "fernando_chairez": {
+            "discord_user_id": 1242209699135230012,
             "rt_channel_id": 1445468981371863194,
             "rt_thread_id": 1445475247452192992,
             "campfire_channel_id": 1445477702827114660,
         },
         "hector_bermudez": {
+            "discord_user_id": 1102917622443540511,
             "rt_channel_id": 1445469026389069926,
             "rt_thread_id": 1445475276409540691,
             "campfire_channel_id": 1445477732153688245,
         },
         "isiac_ramirez": {
+            "discord_user_id": 1167611497812340813,
             "rt_channel_id": 1445469063957450783,
             "rt_thread_id": 1445475303471321118,
             "campfire_channel_id": 1445477769252180029,
         },
         "jose_flores": {
+            "discord_user_id": 1060679251235442719,
             "rt_channel_id": 1445469181947547768,
             "rt_thread_id": 1445475390821896252,
             "campfire_channel_id": 1445477875787628706,
         },
         "logan_bean": {
+            "discord_user_id": 934632146134519820,
             "rt_channel_id": 1445469216781373662,
             "rt_thread_id": 1445475414444212225,
             "campfire_channel_id": 1445477946818170993,
         },
         "matt_kiger": {
+            "discord_user_id": 792234508736135178,
             "rt_channel_id": 1445469256161431663,
             "rt_thread_id": 1445475436531421349,
             "campfire_channel_id": 1445477982750769232,
         },
         "nathaniel_de_leon": {
+            "discord_user_id": 765857167290662913,
             "rt_channel_id": 1445469288923271320,
             "rt_thread_id": 1445475465572651028,
             "campfire_channel_id": 1445478014879272981,
         },
         "rafael_flores": {
+            "discord_user_id": 1354099291177750690,
             "rt_channel_id": 1445469367948021830,
             "rt_thread_id": 1445475516428587109,
             "campfire_channel_id": 1445478175185305814,
         },
         "raymond_flores": {
+            "discord_user_id": 1281670710271410279,
             "rt_channel_id": 1445469419781357598,
             "rt_thread_id": 1445475546296357028,
             "campfire_channel_id": 1445478212120481974,
         },
         "ric_brown": {
+            "discord_user_id": 1363551896530587760,
             "rt_channel_id": 1445469464207294524,
             "rt_thread_id": 1445475577199853579,
             "campfire_channel_id": 1445478254034161787,
         },
         "ryan_mcguire": {
+            "discord_user_id": 326967402606624769,
             "rt_channel_id": 1445469505881899092,
             "rt_thread_id": 1445475604945440799,
             "campfire_channel_id": 1445478292961493142,
         },
         "ryan_poole": {
+            "discord_user_id": 1422223702040383529,
             "rt_channel_id": 1445469540304683028,
             "rt_thread_id": 1445475625908306073,
             "campfire_channel_id": 1445478329623908578,
         },
         "sam_hancock": {
+            "discord_user_id": 883800050524905552,
             "rt_channel_id": 1445469574672683251,
             "rt_thread_id": 1445475652169105619,
             "campfire_channel_id": 1445478370459779092,
         },
         "tony_rodriguez": {
+            "discord_user_id": 1351211310796242977,
             "rt_channel_id": 1445469608311259269,
             "rt_thread_id": 1445475674197459126,
             "campfire_channel_id": 1445478571652026562,
         },
         "trevor_bell": {
+            "discord_user_id": 1127672956051525755,
             "rt_channel_id": 1445469642905882736,
             "rt_thread_id": 1445475702336917576,
             "campfire_channel_id": 1445478600324284416,
         },
         "tyler_brown": {
+            "discord_user_id": 1119490397626974280,
             "rt_channel_id": 1445469676929945700,
             "rt_thread_id": 1445475736562569410,
             "campfire_channel_id": 1445478632381218877,
@@ -244,36 +267,42 @@ CONFIG: Dict[str, Any] = {
 
         # Office Staff
         "araceli_lee": {
+            "discord_user_id": 343265486919958529,
             "rt_channel_id": 1445469725709828278,
             "rt_thread_id": 1445473275365822496,
             "office_notes_thread": 1445473873008267404,
             "campfire_channel_id": 1445477103666729112,
         },
         "amanda_stevenson": {
+            "discord_user_id": 1203398569575452745,
             "rt_channel_id": 1445469774837715067,
             "rt_thread_id": 1445473374401855659,
             "office_notes_thread": 1445473948010807326,
             "campfire_channel_id": 1445477158054138027,
         },
         "rachel_sweet": {
+            "discord_user_id": 1363874133410189443,
             "rt_channel_id": 1445469889933479947,
             "rt_thread_id": 1445473519604596787,
             "office_notes_thread": 1445474268589850654,
             "campfire_channel_id": 1445478136300179588,
         },
         "sean_richter": {
+            "discord_user_id": 1385598726361583616,
             "rt_channel_id": 1445469919750918295,
             "rt_thread_id": 1445473549136433245,
             "office_notes_thread": 1445474401788362895,
             "campfire_channel_id": 1445478399236768008,
         },
         "summer_geer": {
+            "discord_user_id": 908784314056052748,
             "rt_channel_id": 1445469946753581168,
             "rt_thread_id": 1445473579335680061,
             "office_notes_thread": 1445474502887735407,
             "campfire_channel_id": 1445478435668496414,
         },
         "terry_sabin": {
+            "discord_user_id": 528700749555957771,
             "rt_channel_id": 1445469973039288342,
             "rt_thread_id": 1445473611833016350,
             "office_notes_thread": 1445474552636244131,
@@ -282,36 +311,42 @@ CONFIG: Dict[str, Any] = {
 
         # Managers
         "adam_wilmes": {
+            "discord_user_id": 353922166250799106,
             "rt_channel_id": 1445468158189109279,
             "rt_thread_id": 1445470890811719811,
             "todo_thread_id": 1445629515656204318,
             "campfire_channel_id": 1445477055633424415,
         },
         "dakota_colburn": {
+            "discord_user_id": 220326831524544513,
             "rt_channel_id": 1445468473286463609,
             "rt_thread_id": 1445475119224062114,
             "todo_thread_id": 1445629457976135744,
             "campfire_channel_id": 1445477586716328028,
         },
         "jeff_kirkham": {
+            "discord_user_id": 1239615123765596291,
             "rt_channel_id": 1445469096194998282,
             "rt_thread_id": 1445475333032771666,
             "todo_thread_id": 1445629333782925362,
             "campfire_channel_id": 1445477805562400919,
         },
         "joey_heminger": {
+            "discord_user_id": 1228184859772588042,
             "rt_channel_id": 1445469136246276097,
             "rt_thread_id": 1445475366788530389,
             "todo_thread_id": 1445629280267538552,
             "campfire_channel_id": 1445477838344949883,
         },
         "preston_wagner": {
+            "discord_user_id": 1060679174945259520,
             "rt_channel_id": 1445469323765223474,
             "rt_thread_id": 1445475490017181780,
             "todo_thread_id": 1445629238173765744,
             "campfire_channel_id": 1445478097397874932,
         },
         "ash_streeter": {
+            "discord_user_id": 289212918615244801,
             "rt_channel_id": 1445469803551916083,
             "rt_thread_id": 1445473413861871688,
             "office_notes_thread": 1445474037965783110,
@@ -319,6 +354,7 @@ CONFIG: Dict[str, Any] = {
             "campfire_channel_id": 1445477206930358442,
         },
         "lauren_ledyard": {
+            "discord_user_id": 931331954220101632,
             "rt_channel_id": 1445469830848184320,
             "rt_thread_id": 1445473438578774088,
             "office_notes_thread": 1445545433651744828,
@@ -326,11 +362,22 @@ CONFIG: Dict[str, Any] = {
             "campfire_channel_id": 1445477908666908845,
         },
         "presley_mcentee": {
+            "discord_user_id": 1189283572100645005,
             "rt_channel_id": 1445469860422357044,
             "rt_thread_id": 1445473486188449959,
             "office_notes_thread": 1445474204345438420,
             "todo_thread_id": 1445629114953367565,
             "campfire_channel_id": 1445478048513134804,
+        },
+
+        # Managers without Round Table channels (in AUTHORIZED_USERS but no RT channel in Discord structure)
+        "chase": {
+            "discord_user_id": 1297804315041333354,
+            # Note: No RT/Campfire channels provided in Discord structure
+        },
+        "megan": {
+            "discord_user_id": 928725439059464222,
+            # Note: No RT/Campfire channels provided in Discord structure
         },
     },
 }
@@ -1388,8 +1435,7 @@ AUTHORIZED_USERS = [
 
 # Authorized users who can use 🔥 reaction for Campfire tasks
 CAMPFIRE_AUTHORIZED_USERS = [
-    931331954220101632,   # Lauren
-    928725439059464222    # Megan
+    928725439059464222    # Megan (only Megan can use fire react)
 ]
 
 # User authorized for extra custom reaction (set EXTRA_REACT_EMOJI below)
