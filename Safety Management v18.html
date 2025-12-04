@@ -19,37 +19,101 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect } = React;
-      const INCIDENTS_KEY = "bottyotty-safety-incidents";
-      const INSPECTIONS_KEY = "bottyotty-safety-inspections";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function SafetyManagement() {
-        const [incidents, setIncidents] = useState(() => JSON.parse(localStorage.getItem(INCIDENTS_KEY) || "[]"));
-        const [inspections, setInspections] = useState(() => JSON.parse(localStorage.getItem(INSPECTIONS_KEY) || "[]"));
+        const [incidents, setIncidents] = useState([]);
+        const [inspections, setInspections] = useState([]);
+        const [loading, setLoading] = useState(true);
         const [showIncidentForm, setShowIncidentForm] = useState(false);
         const [showInspectionForm, setShowInspectionForm] = useState(false);
         const [incidentForm, setIncidentForm] = useState({ type: "injury", severity: "low", description: "", location: "", reportedBy: "", date: new Date().toISOString().split('T')[0] });
         const [inspectionForm, setInspectionForm] = useState({ area: "", inspector: "", passed: true, notes: "", date: new Date().toISOString().split('T')[0] });
 
-        useEffect(() => { localStorage.setItem(INCIDENTS_KEY, JSON.stringify(incidents)); }, [incidents]);
-        useEffect(() => { localStorage.setItem(INSPECTIONS_KEY, JSON.stringify(inspections)); }, [inspections]);
+        useEffect(() => {
+          loadIncidents();
+          loadInspections();
+        }, []);
 
-        const addIncident = () => {
-          if (!incidentForm.description) return alert("Description required");
-          setIncidents([...incidents, { ...incidentForm, id: Date.now() }]);
-          setIncidentForm({ type: "injury", severity: "low", description: "", location: "", reportedBy: "", date: new Date().toISOString().split('T')[0] });
-          setShowIncidentForm(false);
+        const loadIncidents = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/safety/incidents`);
+            const data = await response.json();
+            if (data.success) {
+              setIncidents(data.incidents);
+            }
+          } catch (error) {
+            console.error("Error loading incidents:", error);
+          } finally {
+            setLoading(false);
+          }
         };
 
-        const addInspection = () => {
+        const loadInspections = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/safety/inspections`);
+            const data = await response.json();
+            if (data.success) {
+              setInspections(data.inspections);
+            }
+          } catch (error) {
+            console.error("Error loading inspections:", error);
+          }
+        };
+
+        const addIncident = async () => {
+          if (!incidentForm.description) return alert("Description required");
+          try {
+            const response = await fetch(`${API_URL}/api/safety/incidents`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(incidentForm)
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadIncidents();
+              setIncidentForm({ type: "injury", severity: "low", description: "", location: "", reportedBy: "", date: new Date().toISOString().split('T')[0] });
+              setShowIncidentForm(false);
+            }
+          } catch (error) {
+            console.error("Error adding incident:", error);
+            alert("Failed to add incident");
+          }
+        };
+
+        const addInspection = async () => {
           if (!inspectionForm.area) return alert("Area required");
-          setInspections([...inspections, { ...inspectionForm, id: Date.now() }]);
-          setInspectionForm({ area: "", inspector: "", passed: true, notes: "", date: new Date().toISOString().split('T')[0] });
-          setShowInspectionForm(false);
+          try {
+            const response = await fetch(`${API_URL}/api/safety/inspections`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(inspectionForm)
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadInspections();
+              setInspectionForm({ area: "", inspector: "", passed: true, notes: "", date: new Date().toISOString().split('T')[0] });
+              setShowInspectionForm(false);
+            }
+          } catch (error) {
+            console.error("Error adding inspection:", error);
+            alert("Failed to add inspection");
+          }
         };
 
         const daysWithoutIncident = incidents.length > 0
           ? Math.floor((new Date() - new Date(incidents[incidents.length - 1].date)) / (1000 * 60 * 60 * 24))
           : 365;
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading safety data...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-8">

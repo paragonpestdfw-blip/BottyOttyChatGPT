@@ -19,13 +19,11 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect } = React;
-      const STORAGE_KEY = "bottyotty-vehicles";
+      const API_URL = "https://bottyotty-production.up.railway.app";
 
       function VehicleManagement() {
-        const [vehicles, setVehicles] = useState(() => {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          return saved ? JSON.parse(saved) : [];
-        });
+        const [vehicles, setVehicles] = useState([]);
+        const [loading, setLoading] = useState(true);
         const [showAdd, setShowAdd] = useState(false);
         const [editing, setEditing] = useState(null);
         const [form, setForm] = useState({
@@ -34,27 +32,75 @@
           status: "active", notes: ""
         });
 
-        useEffect(() => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
-        }, [vehicles]);
+        useEffect(() => { loadVehicles(); }, []);
 
-        const saveVehicle = () => {
-          if (!form.name || !form.plate) return alert("Name and plate required");
-          if (editing) {
-            setVehicles(vehicles.map(v => v.id === editing.id ? { ...form, id: editing.id } : v));
-          } else {
-            setVehicles([...vehicles, { ...form, id: Date.now() }]);
+        const loadVehicles = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/vehicles`);
+            const data = await response.json();
+            if (data.success) {
+              setVehicles(data.vehicles);
+            }
+          } catch (error) {
+            console.error("Error loading vehicles:", error);
+          } finally {
+            setLoading(false);
           }
-          setForm({ name: "", plate: "", vin: "", year: "", make: "", model: "", mileage: "", lastService: "", nextService: "", assignedTo: "", status: "active", notes: "" });
-          setShowAdd(false);
-          setEditing(null);
         };
 
-        const deleteVehicle = (id) => {
-          if (confirm("Delete this vehicle?")) setVehicles(vehicles.filter(v => v.id !== id));
+        const saveVehicle = async () => {
+          if (!form.name || !form.plate) return alert("Name and plate required");
+          try {
+            if (editing) {
+              const response = await fetch(`${API_URL}/api/vehicles/${editing.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+              });
+              const data = await response.json();
+              if (data.success) loadVehicles();
+            } else {
+              const response = await fetch(`${API_URL}/api/vehicles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+              });
+              const data = await response.json();
+              if (data.success) loadVehicles();
+            }
+            setForm({ name: "", plate: "", vin: "", year: "", make: "", model: "", mileage: "", lastService: "", nextService: "", assignedTo: "", status: "active", notes: "" });
+            setShowAdd(false);
+            setEditing(null);
+          } catch (error) {
+            console.error("Error saving vehicle:", error);
+            alert("Failed to save vehicle");
+          }
+        };
+
+        const deleteVehicle = async (id) => {
+          if (!confirm("Delete this vehicle?")) return;
+          try {
+            const response = await fetch(`${API_URL}/api/vehicles/${id}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) loadVehicles();
+          } catch (error) {
+            console.error("Error deleting vehicle:", error);
+          }
         };
 
         const editVehicle = (v) => { setEditing(v); setForm(v); setShowAdd(true); };
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading vehicles...</p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen p-8">
