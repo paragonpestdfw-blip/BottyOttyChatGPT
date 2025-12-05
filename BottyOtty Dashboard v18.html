@@ -632,10 +632,24 @@
         margin-bottom: var(--card-gap) !important;
       }
 
-      body.layout-dashboard-grid #root > div {
+      /* Dashboard Grid: Show all task categories in a grid layout */
+      body.layout-dashboard-grid .dashboard-grid-container {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
         gap: var(--card-gap);
+        align-items: start;
+      }
+
+      body.layout-dashboard-grid .dashboard-grid-item {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      body.layout-dashboard-grid .dashboard-grid-item .view-content {
+        flex: 1;
+        overflow: auto;
+        max-height: 600px;
       }
 
       /* List View Clean Layout */
@@ -656,9 +670,491 @@
         flex-direction: column;
         gap: calc(var(--card-gap) / 2);
       }
+
+      /* ========================================
+         📝 STICKY NOTES
+         ======================================== */
+
+      /* Floating button */
+      .sticky-notes-toggle {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sticky-notes-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+      }
+
+      /* Slide-out panel */
+      .sticky-notes-panel {
+        position: fixed;
+        top: 0;
+        right: -450px;
+        width: 400px;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: -5px 0 30px rgba(0, 0, 0, 0.3);
+        transition: right 0.3s ease;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sticky-notes-panel.open {
+        right: 0;
+      }
+
+      /* Panel header */
+      .sticky-notes-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sticky-notes-header h2 {
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0;
+      }
+
+      .sticky-notes-close {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 20px;
+        transition: all 0.2s;
+      }
+
+      .sticky-notes-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+      }
+
+      /* Notes container */
+      .sticky-notes-container {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        position: relative;
+        min-height: 600px;
+      }
+
+      /* Individual sticky note */
+      .sticky-note {
+        position: absolute;
+        width: 200px;
+        min-height: 150px;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        cursor: move;
+        transition: box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sticky-note:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      }
+
+      .sticky-note.dragging {
+        opacity: 0.8;
+        z-index: 1000;
+      }
+
+      /* Note colors */
+      .sticky-note.yellow {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #333;
+      }
+
+      .sticky-note.pink {
+        background: linear-gradient(135deg, #ff6b9d 0%, #ffc3d7 100%);
+        color: #fff;
+      }
+
+      .sticky-note.blue {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: #fff;
+      }
+
+      .sticky-note.green {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: #333;
+      }
+
+      .sticky-note.purple {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+      }
+
+      .sticky-note.orange {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: #333;
+      }
+
+      /* Note header */
+      .sticky-note-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .sticky-note-drag-handle {
+        cursor: grab;
+        font-size: 16px;
+        opacity: 0.6;
+      }
+
+      .sticky-note-drag-handle:active {
+        cursor: grabbing;
+      }
+
+      .sticky-note-delete {
+        background: rgba(0, 0, 0, 0.2);
+        border: none;
+        color: inherit;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .sticky-note-delete:hover {
+        background: rgba(255, 0, 0, 0.6);
+        color: white;
+        transform: scale(1.1);
+      }
+
+      /* Note content */
+      .sticky-note-content {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        resize: none;
+        font-size: 14px;
+        line-height: 1.4;
+        color: inherit;
+        font-family: inherit;
+      }
+
+      .sticky-note-content::placeholder {
+        opacity: 0.5;
+      }
+
+      /* Note timestamp */
+      .sticky-note-timestamp {
+        font-size: 10px;
+        opacity: 0.6;
+        text-align: right;
+      }
+
+      /* Add note button */
+      .sticky-notes-add {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .sticky-notes-add button {
+        flex: 1;
+        min-width: 80px;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        transition: all 0.2s;
+      }
+
+      .sticky-notes-add button:hover {
+        transform: scale(1.05);
+      }
+
+      /* ========================================
+         🧭 SIDEBAR NAVIGATION
+         ======================================== */
+
+      #sidebarNav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        background: rgba(15, 15, 35, 0.98);
+        backdrop-filter: blur(20px);
+        border-right: 2px solid rgba(255, 255, 255, 0.1);
+        z-index: 9998;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+        transition: all 0.4s ease;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #sidebarNav:not(.collapsed) { width: 280px; }
+      #sidebarNav.collapsed { width: 70px; }
+
+      #sidebarNav.collapsed .nav-item-label,
+      #sidebarNav.collapsed .sidebar-header-text,
+      #sidebarNav.collapsed .sidebar-footer-text {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+      }
+
+      .sidebar-inner {
+        padding: 20px 0;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .sidebar-header {
+        padding: 0 20px 20px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .sidebar-header-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sidebar-logo {
+        font-size: 32px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-header-text {
+        transition: all 0.4s ease;
+        white-space: nowrap;
+      }
+
+      .sidebar-header-text h2 {
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+      }
+
+      .sidebar-header-text p {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        margin: 2px 0 0 0;
+      }
+
+      .sidebar-nav-items {
+        flex: 1;
+        padding: 0 12px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        transform: translateX(4px);
+      }
+
+      .nav-item.active {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(236, 72, 153, 0.3) 100%);
+        color: white;
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+      }
+
+      /* When collapsed, show active state as left border only */
+      #sidebarNav.collapsed .nav-item.active {
+        background: transparent;
+        border: 1px solid transparent;
+        border-left: 4px solid #667eea;
+        box-shadow: none;
+        padding-left: 13px;
+      }
+
+      .nav-item-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+        width: 24px;
+        text-align: center;
+      }
+
+      .nav-item-label {
+        font-weight: 600;
+        font-size: 15px;
+        white-space: nowrap;
+        transition: all 0.4s ease;
+      }
+
+      .sidebar-footer {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: auto;
+      }
+
+      .sidebar-toggle-btn {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .sidebar-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      .sidebar-footer-text {
+        transition: all 0.4s ease;
+        white-space: nowrap;
+      }
+
+      /* Adjust main content when sidebar is expanded */
+      body:not(.sidebar-collapsed) #root {
+        margin-left: 280px;
+        transition: margin-left 0.4s ease;
+      }
+
+      body.sidebar-collapsed #root {
+        margin-left: 70px;
+        transition: margin-left 0.4s ease;
+      }
+
+      /* Responsive behavior */
+      @media (max-width: 1024px) {
+        #sidebarNav:not(.collapsed) { width: 280px; }
+        body:not(.sidebar-collapsed) #root { margin-left: 0; }
+        body.sidebar-collapsed #root { margin-left: 0; }
+        #sidebarNav.collapsed { transform: translateX(-100%); }
+      }
     </style>
   </head>
   <body>
+    <!-- Sidebar Navigation -->
+    <div id="sidebarNav" class="">
+      <div class="sidebar-inner">
+        <div class="sidebar-header">
+          <div class="sidebar-header-content">
+            <div class="sidebar-logo">🤖</div>
+            <div class="sidebar-header-text">
+              <h2>BottyOtty</h2>
+              <p>Task Manager</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-nav-items">
+          <!-- Dashboard - Mark as active on Dashboard page -->
+          <a href="BottyOtty Dashboard v18.html" class="nav-item active">
+            <span class="nav-item-icon">📊</span>
+            <span class="nav-item-label">Dashboard</span>
+          </a>
+
+          <!-- Admin Panel - Mark as active on Admin page -->
+          <a href="Admin Panel v18.html" class="nav-item">
+            <span class="nav-item-icon">⚙️</span>
+            <span class="nav-item-label">Admin Panel</span>
+          </a>
+
+          <!-- Quick Launch - Mark as active on Quick Launch page -->
+          <a href="Quick Launch v18.html" class="nav-item">
+            <span class="nav-item-icon">🚀</span>
+            <span class="nav-item-label">Quick Launch</span>
+          </a>
+
+          <!-- Reports - Mark as active on Reports page -->
+          <a href="BottyOtty Reports v18.html" class="nav-item">
+            <span class="nav-item-icon">📈</span>
+            <span class="nav-item-label">Reports</span>
+          </a>
+
+          <!-- Help - Mark as active on Help page -->
+          <a href="BottyOtty Help & User Guide v18.html" class="nav-item">
+            <span class="nav-item-icon">❓</span>
+            <span class="nav-item-label">Help Guide</span>
+          </a>
+
+          <!-- Newsletter - Mark as active on Newsletter page -->
+          <a href="BottyOtty Newsletter v18.html" class="nav-item">
+            <span class="nav-item-icon">📰</span>
+            <span class="nav-item-label">Newsletter</span>
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <button onclick="toggleSidebar()" class="sidebar-toggle-btn">
+            <span id="sidebarToggleIcon">←</span>
+            <span class="sidebar-footer-text" id="sidebarToggleText">Collapse</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky Notes Toggle Button (rendered by React) -->
+    <div id="sticky-notes-root"></div>
+
     <!-- Customization Toggle Button -->
     <button id="customizeToggleBtn" onclick="toggleCustomizationPanel()">
       ⚙️
@@ -3688,6 +4184,12 @@
           }
         });
 
+        // Sidebar state - default to collapsed
+        const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-sidebar-collapsed');
+          return saved !== null ? saved === 'true' : true; // Default to true (collapsed)
+        });
+
         const [activeView, setActiveView] = useState("incoming");
         const [editingTask, setEditingTask] = useState(null);
         const [showAddTask, setShowAddTask] = useState(false);
@@ -3761,6 +4263,53 @@
 
         // User configuration (loaded from localStorage or defaults)
         const [USER_CONFIG, setUSER_CONFIG] = useState(() => loadUserConfig());
+
+        // Track if dashboard grid layout is active
+        const [isGridLayout, setIsGridLayout] = useState(false);
+
+        // Watch for layout changes
+        useEffect(() => {
+          const observer = new MutationObserver(() => {
+            setIsGridLayout(document.body.classList.contains('layout-dashboard-grid'));
+          });
+
+          observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+          });
+
+          // Initial check
+          setIsGridLayout(document.body.classList.contains('layout-dashboard-grid'));
+
+          return () => observer.disconnect();
+        }, []);
+
+        // Sidebar toggle effect
+        useEffect(() => {
+          const sidebar = document.getElementById('sidebarNav');
+          const icon = document.getElementById('sidebarToggleIcon');
+          const text = document.getElementById('sidebarToggleText');
+
+          if (sidebarCollapsed) {
+            document.body.classList.add('sidebar-collapsed');
+            if (sidebar) sidebar.classList.add('collapsed');
+            if (icon) icon.textContent = '→';
+            if (text) text.textContent = 'Expand';
+          } else {
+            document.body.classList.remove('sidebar-collapsed');
+            if (sidebar) sidebar.classList.remove('collapsed');
+            if (icon) icon.textContent = '←';
+            if (text) text.textContent = 'Collapse';
+          }
+          localStorage.setItem('bottyotty-sidebar-collapsed', sidebarCollapsed);
+        }, [sidebarCollapsed]);
+
+        // Sidebar toggle function - make it globally accessible
+        useEffect(() => {
+          window.toggleSidebar = () => {
+            setSidebarCollapsed(prev => !prev);
+          };
+        }, []);
 
         // Log when USER_CONFIG or currentUser changes (to debug button visibility)
         useEffect(() => {
@@ -7744,6 +8293,225 @@
                     </div>
                   )}
                 </>
+              ) : isGridLayout ? (
+                /* Dashboard Grid View - Show all categories */
+                <div className="dashboard-grid-container">
+                  {/* Incoming Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📥 Incoming
+                      <span className="text-sm bg-blue-600 px-2 py-1 rounded">
+                        {incomingTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {incomingTasks.length > 0 ? (
+                        incomingTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No incoming tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* My Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📋 My Tasks
+                      <span className="text-sm bg-purple-600 px-2 py-1 rounded">
+                        {myTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {myTasks.length > 0 ? (
+                        myTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Assigned Out */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      📤 Assigned Out
+                      <span className="text-sm bg-orange-600 px-2 py-1 rounded">
+                        {assignedOutTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {assignedOutTasks.length > 0 ? (
+                        assignedOutTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No assigned out tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pool Tasks */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🏊 Pool
+                      <span className="text-sm bg-cyan-600 px-2 py-1 rounded">
+                        {poolTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {poolTasks.length > 0 ? (
+                        poolTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No pool tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Campfire */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🔥 Campfire
+                      <span className="text-sm bg-red-600 px-2 py-1 rounded">
+                        {campfireTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {campfireTasks.length > 0 ? (
+                        campfireTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No campfire tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Requests */}
+                  <div className="dashboard-grid-item glass-element rounded-xl p-4">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🎯 Requests
+                      <span className="text-sm bg-green-600 px-2 py-1 rounded">
+                        {teamTasks.length}
+                      </span>
+                    </h3>
+                    <div className="view-content space-y-3">
+                      {teamTasks.length > 0 ? (
+                        teamTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isStaged={stagedTasks.has(task.id)}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onToggleStar={handleToggleStar}
+                            onComplete={handleCompleteTask}
+                            onSave={handleSaveForLater}
+                            onAssign={handleAssignTask}
+                            onAssignToOther={handleAssignToOther}
+                            onSendToPool={handleSendToPool}
+                            onCardClick={(task) => setExpandedTask(task)}
+                            showActions={true}
+                            draggable={true}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-300 text-sm">
+                          No requests
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div
                   className="drop-zone space-y-4 view-content"
@@ -9985,9 +10753,210 @@
         );
       }
 
+      // Sticky Notes Component
+      function StickyNotes() {
+        const [isOpen, setIsOpen] = useState(false);
+        const [notes, setNotes] = useState(() => {
+          const saved = localStorage.getItem('bottyotty-sticky-notes');
+          return saved ? JSON.parse(saved) : [];
+        });
+        const [draggedNote, setDraggedNote] = useState(null);
+        const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+        const colors = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange'];
+
+        // Save notes to localStorage whenever they change
+        useEffect(() => {
+          localStorage.setItem('bottyotty-sticky-notes', JSON.stringify(notes));
+        }, [notes]);
+
+        // Add new note
+        const addNote = (color) => {
+          const newNote = {
+            id: Date.now(),
+            content: '',
+            color: color,
+            position: { x: 20 + (notes.length * 20) % 300, y: 20 + (notes.length * 20) % 400 },
+            createdAt: new Date().toISOString()
+          };
+          setNotes([...notes, newNote]);
+        };
+
+        // Delete note
+        const deleteNote = (id) => {
+          setNotes(notes.filter(note => note.id !== id));
+        };
+
+        // Update note content
+        const updateNote = (id, content) => {
+          setNotes(notes.map(note =>
+            note.id === id ? { ...note, content, updatedAt: new Date().toISOString() } : note
+          ));
+        };
+
+        // Start dragging
+        const handleMouseDown = (e, note) => {
+          if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+
+          setDraggedNote(note);
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+          });
+        };
+
+        // Handle drag
+        const handleMouseMove = (e) => {
+          if (!draggedNote) return;
+
+          const container = document.querySelector('.sticky-notes-container');
+          if (!container) return;
+
+          const containerRect = container.getBoundingClientRect();
+          const newX = e.clientX - containerRect.left - dragOffset.x;
+          const newY = e.clientY - containerRect.top - dragOffset.y;
+
+          setNotes(notes.map(note =>
+            note.id === draggedNote.id
+              ? { ...note, position: { x: Math.max(0, newX), y: Math.max(0, newY) } }
+              : note
+          ));
+        };
+
+        // End dragging
+        const handleMouseUp = () => {
+          setDraggedNote(null);
+        };
+
+        // Keyboard shortcuts
+        useEffect(() => {
+          const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+              setIsOpen(false);
+            }
+          };
+
+          document.addEventListener('keydown', handleKeyDown);
+          return () => document.removeEventListener('keydown', handleKeyDown);
+        }, [isOpen]);
+
+        // Add mouse event listeners for dragging
+        useEffect(() => {
+          if (draggedNote) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+          }
+        }, [draggedNote, dragOffset, notes]);
+
+        return (
+          <>
+            {/* Floating Toggle Button */}
+            <button
+              className="sticky-notes-toggle"
+              onClick={() => setIsOpen(!isOpen)}
+              title="Open Sticky Notes"
+            >
+              📝
+            </button>
+
+            {/* Slide-out Panel */}
+            <div className={`sticky-notes-panel ${isOpen ? 'open' : ''}`}>
+              {/* Header */}
+              <div className="sticky-notes-header">
+                <h2>📝 Personal Notes</h2>
+                <button
+                  className="sticky-notes-close"
+                  onClick={() => setIsOpen(false)}
+                  title="Close"
+                >
+                  ✖
+                </button>
+              </div>
+
+              {/* Notes Container */}
+              <div className="sticky-notes-container">
+                {notes.map(note => (
+                  <div
+                    key={note.id}
+                    className={`sticky-note ${note.color} ${draggedNote?.id === note.id ? 'dragging' : ''}`}
+                    style={{
+                      left: `${note.position.x}px`,
+                      top: `${note.position.y}px`
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, note)}
+                  >
+                    <div className="sticky-note-header">
+                      <span className="sticky-note-drag-handle">⋮⋮</span>
+                      <button
+                        className="sticky-note-delete"
+                        onClick={() => deleteNote(note.id)}
+                        title="Delete note"
+                      >
+                        ✖
+                      </button>
+                    </div>
+                    <textarea
+                      className="sticky-note-content"
+                      value={note.content}
+                      onChange={(e) => updateNote(note.id, e.target.value)}
+                      placeholder="Type your note here..."
+                      rows={4}
+                    />
+                    <div className="sticky-note-timestamp">
+                      {new Date(note.updatedAt || note.createdAt).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {notes.length === 0 && (
+                  <div style={{ textAlign: 'center', color: '#999', padding: '40px', fontSize: '14px' }}>
+                    Click a color below to add your first note!
+                  </div>
+                )}
+              </div>
+
+              {/* Add Note Buttons */}
+              <div className="sticky-notes-add">
+                {colors.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => addNote(color)}
+                    style={{
+                      background: color === 'yellow' ? '#ffd700' :
+                                 color === 'pink' ? '#ff6b9d' :
+                                 color === 'blue' ? '#4facfe' :
+                                 color === 'green' ? '#43e97b' :
+                                 color === 'purple' ? '#667eea' :
+                                 '#fa709a',
+                      color: color === 'yellow' || color === 'green' || color === 'orange' ? '#333' : '#fff'
+                    }}
+                    title={`Add ${color} note`}
+                  >
+                    + {color.charAt(0).toUpperCase() + color.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      }
+
       // Render
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<TaskManager />);
+
+      // Render Sticky Notes separately
+      const stickyNotesRoot = ReactDOM.createRoot(document.getElementById("sticky-notes-root"));
+      stickyNotesRoot.render(<StickyNotes />);
     </script>
   </body>
 </html>
