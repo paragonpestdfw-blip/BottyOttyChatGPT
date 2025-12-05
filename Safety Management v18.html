@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Safety Management</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+      * { font-family: "Inter", sans-serif; }
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+      .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+      const API_URL = "https://bottyotty-production.up.railway.app";
+
+      function SafetyManagement() {
+        const [incidents, setIncidents] = useState([]);
+        const [inspections, setInspections] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [showIncidentForm, setShowIncidentForm] = useState(false);
+        const [showInspectionForm, setShowInspectionForm] = useState(false);
+        const [incidentForm, setIncidentForm] = useState({ type: "injury", severity: "low", description: "", location: "", reportedBy: "", date: new Date().toISOString().split('T')[0] });
+        const [inspectionForm, setInspectionForm] = useState({ area: "", inspector: "", passed: true, notes: "", date: new Date().toISOString().split('T')[0] });
+
+        useEffect(() => {
+          loadIncidents();
+          loadInspections();
+        }, []);
+
+        const loadIncidents = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/safety/incidents`);
+            const data = await response.json();
+            if (data.success) {
+              setIncidents(data.incidents);
+            }
+          } catch (error) {
+            console.error("Error loading incidents:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const loadInspections = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/safety/inspections`);
+            const data = await response.json();
+            if (data.success) {
+              setInspections(data.inspections);
+            }
+          } catch (error) {
+            console.error("Error loading inspections:", error);
+          }
+        };
+
+        const addIncident = async () => {
+          if (!incidentForm.description) return alert("Description required");
+          try {
+            const response = await fetch(`${API_URL}/api/safety/incidents`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(incidentForm)
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadIncidents();
+              setIncidentForm({ type: "injury", severity: "low", description: "", location: "", reportedBy: "", date: new Date().toISOString().split('T')[0] });
+              setShowIncidentForm(false);
+            }
+          } catch (error) {
+            console.error("Error adding incident:", error);
+            alert("Failed to add incident");
+          }
+        };
+
+        const addInspection = async () => {
+          if (!inspectionForm.area) return alert("Area required");
+          try {
+            const response = await fetch(`${API_URL}/api/safety/inspections`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(inspectionForm)
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadInspections();
+              setInspectionForm({ area: "", inspector: "", passed: true, notes: "", date: new Date().toISOString().split('T')[0] });
+              setShowInspectionForm(false);
+            }
+          } catch (error) {
+            console.error("Error adding inspection:", error);
+            alert("Failed to add inspection");
+          }
+        };
+
+        const daysWithoutIncident = incidents.length > 0
+          ? Math.floor((new Date() - new Date(incidents[incidents.length - 1].date)) / (1000 * 60 * 60 * 24))
+          : 365;
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading safety data...</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen p-8">
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="/mnt/user-data/uploads/Botty_Otty_Logo.png" alt="Logo" className="w-16 h-16" onError={e => e.target.style.display='none'} />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white">🦺 Safety Management</h1>
+                    <p className="text-gray-200 text-sm">Track incidents, inspections & safety metrics</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href="BottyOtty Dashboard v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">🏠 Dashboard</a>
+                  <a href="Admin Panel v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">⚙️ Admin</a>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Days Without Incident</p>
+                <p className="text-5xl font-bold text-green-400">{daysWithoutIncident}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Total Incidents</p>
+                <p className="text-5xl font-bold text-yellow-400">{incidents.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Inspections Done</p>
+                <p className="text-5xl font-bold text-blue-400">{inspections.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Pass Rate</p>
+                <p className="text-5xl font-bold text-purple-400">{inspections.length > 0 ? Math.round((inspections.filter(i => i.passed).length / inspections.length) * 100) : 100}%</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button onClick={() => setShowIncidentForm(true)} className="px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg">⚠️ Report Incident</button>
+              <button onClick={() => setShowInspectionForm(true)} className="px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg">📋 Log Inspection</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">Recent Incidents</h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {incidents.slice().reverse().map(i => (
+                    <div key={i.id} className={\`p-4 rounded-lg \${i.severity === 'high' ? 'bg-red-900 bg-opacity-30' : i.severity === 'medium' ? 'bg-yellow-900 bg-opacity-30' : 'bg-gray-900 bg-opacity-30'}\`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-white font-bold">{i.type.toUpperCase()}</span>
+                        <span className="text-gray-300 text-xs">{i.date}</span>
+                      </div>
+                      <p className="text-gray-200 text-sm mb-2">{i.description}</p>
+                      <p className="text-gray-400 text-xs">📍 {i.location} | 👤 {i.reportedBy}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">Recent Inspections</h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {inspections.slice().reverse().map(i => (
+                    <div key={i.id} className={\`p-4 rounded-lg \${i.passed ? 'bg-green-900 bg-opacity-30' : 'bg-red-900 bg-opacity-30'}\`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-white font-bold">{i.area}</span>
+                        <span className={\`px-2 py-1 rounded text-xs font-bold \${i.passed ? 'bg-green-500' : 'bg-red-500'} text-white\`}>{i.passed ? 'PASS' : 'FAIL'}</span>
+                      </div>
+                      <p className="text-gray-200 text-sm mb-2">{i.notes}</p>
+                      <p className="text-gray-400 text-xs">👤 {i.inspector} | 📅 {i.date}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {showIncidentForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full">
+                  <h3 className="text-2xl font-bold text-white mb-6">⚠️ Report Incident</h3>
+                  <div className="space-y-4">
+                    <select value={incidentForm.type} onChange={e => setIncidentForm({...incidentForm, type: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="injury">Injury</option>
+                      <option value="near-miss">Near Miss</option>
+                      <option value="property-damage">Property Damage</option>
+                      <option value="chemical-spill">Chemical Spill</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <select value={incidentForm.severity} onChange={e => setIncidentForm({...incidentForm, severity: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="low">Low Severity</option>
+                      <option value="medium">Medium Severity</option>
+                      <option value="high">High Severity</option>
+                    </select>
+                    <textarea placeholder="Describe the incident" value={incidentForm.description} onChange={e => setIncidentForm({...incidentForm, description: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="4" />
+                    <input placeholder="Location" value={incidentForm.location} onChange={e => setIncidentForm({...incidentForm, location: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Reported By" value={incidentForm.reportedBy} onChange={e => setIncidentForm({...incidentForm, reportedBy: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input type="date" value={incidentForm.date} onChange={e => setIncidentForm({...incidentForm, date: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <div className="flex gap-2">
+                      <button onClick={addIncident} className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold">Submit Report</button>
+                      <button onClick={() => setShowIncidentForm(false)} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showInspectionForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full">
+                  <h3 className="text-2xl font-bold text-white mb-6">📋 Log Inspection</h3>
+                  <div className="space-y-4">
+                    <input placeholder="Area/Equipment" value={inspectionForm.area} onChange={e => setInspectionForm({...inspectionForm, area: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Inspector Name" value={inspectionForm.inspector} onChange={e => setInspectionForm({...inspectionForm, inspector: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <select value={inspectionForm.passed} onChange={e => setInspectionForm({...inspectionForm, passed: e.target.value === 'true'})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="true">Passed</option>
+                      <option value="false">Failed</option>
+                    </select>
+                    <textarea placeholder="Notes" value={inspectionForm.notes} onChange={e => setInspectionForm({...inspectionForm, notes: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="4" />
+                    <input type="date" value={inspectionForm.date} onChange={e => setInspectionForm({...inspectionForm, date: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <div className="flex gap-2">
+                      <button onClick={addInspection} className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Save Inspection</button>
+                      <button onClick={() => setShowInspectionForm(false)} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<SafetyManagement />);
+    </script>
+  </body>
+</html>

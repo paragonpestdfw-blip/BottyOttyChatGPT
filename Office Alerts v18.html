@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Office Alerts</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+      * { font-family: "Inter", sans-serif; }
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+      .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+      const ALERTS_KEY = "bottyotty-office-alerts";
+      const PEOPLE_KEY = "bottyotty-alert-people";
+      const API_URL = "https://bottyotty-production.up.railway.app";
+
+      function OfficeAlerts() {
+        const [alerts, setAlerts] = useState(() => JSON.parse(localStorage.getItem(ALERTS_KEY) || "[]"));
+        const [people, setPeople] = useState(() => JSON.parse(localStorage.getItem(PEOPLE_KEY) || "[]"));
+        const [showSend, setShowSend] = useState(false);
+        const [showManage, setShowManage] = useState(false);
+        const [alertForm, setAlertForm] = useState({ message: "", recipients: [], priority: "medium", channelId: "" });
+        const [personForm, setPersonForm] = useState({ name: "", discordId: "", role: "" });
+        const [notification, setNotification] = useState(null);
+
+        useEffect(() => { localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts)); }, [alerts]);
+        useEffect(() => { localStorage.setItem(PEOPLE_KEY, JSON.stringify(people)); }, [people]);
+
+        const sendAlert = async () => {
+          if (!alertForm.message || alertForm.recipients.length === 0) {
+            return setNotification({ type: "error", message: "Message and recipients required" });
+          }
+
+          const alert = {
+            ...alertForm,
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            sent: true
+          };
+
+          setAlerts([...alerts, alert]);
+
+          // Call API if channel ID provided
+          if (alertForm.channelId) {
+            try {
+              await fetch(`\${API_URL}/api/office-alert`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(alert)
+              });
+              setNotification({ type: "success", message: "Alert sent successfully!" });
+            } catch (err) {
+              setNotification({ type: "warning", message: "Alert saved locally but Discord send failed" });
+            }
+          } else {
+            setNotification({ type: "success", message: "Alert saved!" });
+          }
+
+          setAlertForm({ message: "", recipients: [], priority: "medium", channelId: "" });
+          setShowSend(false);
+        };
+
+        const addPerson = () => {
+          if (!personForm.name) return alert("Name required");
+          setPeople([...people, { ...personForm, id: Date.now() }]);
+          setPersonForm({ name: "", discordId: "", role: "" });
+        };
+
+        const removePerson = (id) => {
+          if (confirm("Remove this person?")) setPeople(people.filter(p => p.id !== id));
+        };
+
+        const toggleRecipient = (personId) => {
+          setAlertForm(prev => ({
+            ...prev,
+            recipients: prev.recipients.includes(personId)
+              ? prev.recipients.filter(id => id !== personId)
+              : [...prev.recipients, personId]
+          }));
+        };
+
+        return (
+          <div className="min-h-screen p-8">
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="/mnt/user-data/uploads/Botty_Otty_Logo.png" alt="Logo" className="w-16 h-16" onError={e => e.target.style.display='none'} />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white">📢 Office Alerts</h1>
+                    <p className="text-gray-200 text-sm">Send targeted notifications to specific people</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href="BottyOtty Dashboard v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">🏠 Dashboard</a>
+                  <a href="Admin Panel v18.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">⚙️ Admin</a>
+                </div>
+              </div>
+            </div>
+
+            {notification && (
+              <div className={\`glass rounded-xl p-4 mb-6 border-l-4 \${notification.type === 'success' ? 'border-green-500' : notification.type === 'error' ? 'border-red-500' : 'border-yellow-500'}\`}>
+                <p className="text-white font-medium">{notification.message}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Total Alerts Sent</p>
+                <p className="text-5xl font-bold text-white">{alerts.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">People</p>
+                <p className="text-5xl font-bold text-blue-400">{people.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">High Priority</p>
+                <p className="text-5xl font-bold text-red-400">{alerts.filter(a => a.priority === 'high').length}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button onClick={() => setShowSend(true)} className="px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg">
+                📢 Send New Alert
+              </button>
+              <button onClick={() => setShowManage(true)} className="px-6 py-4 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white rounded-xl font-bold text-lg">
+                👥 Manage People
+              </button>
+            </div>
+
+            <div className="glass rounded-2xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-4">Recent Alerts</h2>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {alerts.slice().reverse().map(alert => (
+                  <div key={alert.id} className={\`p-4 rounded-lg \${alert.priority === 'high' ? 'bg-red-900 bg-opacity-30' : alert.priority === 'medium' ? 'bg-yellow-900 bg-opacity-30' : 'bg-blue-900 bg-opacity-30'}\`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={\`px-2 py-1 rounded text-xs font-bold \${alert.priority === 'high' ? 'bg-red-500' : alert.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'} text-white\`}>
+                        {alert.priority.toUpperCase()}
+                      </span>
+                      <span className="text-gray-300 text-xs">{new Date(alert.timestamp).toLocaleString()}</span>
+                    </div>
+                    <p className="text-white mb-2">{alert.message}</p>
+                    <p className="text-gray-400 text-sm">
+                      📬 To: {alert.recipients.map(id => people.find(p => p.id === id)?.name || 'Unknown').join(', ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {showSend && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full my-8">
+                  <h3 className="text-2xl font-bold text-white mb-6">📢 Send Office Alert</h3>
+                  <div className="space-y-4">
+                    <textarea placeholder="Alert Message" value={alertForm.message} onChange={e => setAlertForm({...alertForm, message: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="4" />
+
+                    <div>
+                      <label className="block text-white font-medium mb-2">Select Recipients</label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {people.map(person => (
+                          <label key={person.id} className="flex items-center gap-2 p-2 bg-white bg-opacity-10 rounded cursor-pointer hover:bg-opacity-20">
+                            <input
+                              type="checkbox"
+                              checked={alertForm.recipients.includes(person.id)}
+                              onChange={() => toggleRecipient(person.id)}
+                            />
+                            <span className="text-white">{person.name}</span>
+                            {person.role && <span className="text-gray-400 text-sm">({person.role})</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <select value={alertForm.priority} onChange={e => setAlertForm({...alertForm, priority: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+
+                    <input placeholder="Discord Channel ID (optional)" value={alertForm.channelId} onChange={e => setAlertForm({...alertForm, channelId: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+
+                    <div className="flex gap-2">
+                      <button onClick={sendAlert} className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Send Alert</button>
+                      <button onClick={() => setShowSend(false)} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showManage && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full">
+                  <h3 className="text-2xl font-bold text-white mb-6">👥 Manage People</h3>
+
+                  <div className="mb-6 p-4 bg-white bg-opacity-10 rounded-lg">
+                    <h4 className="text-white font-bold mb-3">Add New Person</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input placeholder="Name" value={personForm.name} onChange={e => setPersonForm({...personForm, name: e.target.value})} className="px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                      <input placeholder="Discord ID" value={personForm.discordId} onChange={e => setPersonForm({...personForm, discordId: e.target.value})} className="px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                      <input placeholder="Role" value={personForm.role} onChange={e => setPersonForm({...personForm, role: e.target.value})} className="px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    </div>
+                    <button onClick={addPerson} className="w-full mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">Add Person</button>
+                  </div>
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {people.map(person => (
+                      <div key={person.id} className="flex justify-between items-center p-3 bg-white bg-opacity-10 rounded-lg">
+                        <div>
+                          <p className="text-white font-medium">{person.name}</p>
+                          <p className="text-gray-400 text-sm">{person.role} {person.discordId && `| ID: ${person.discordId}`}</p>
+                        </div>
+                        <button onClick={() => removePerson(person.id)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm">Remove</button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={() => setShowManage(false)} className="w-full mt-6 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<OfficeAlerts />);
+    </script>
+  </body>
+</html>
