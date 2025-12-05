@@ -1904,6 +1904,7 @@
           users: {},
         });
 
+
         // Report Scheduling Configuration
         const [reportSchedule, setReportSchedule] = useState({
           enabled: false,
@@ -1913,6 +1914,12 @@
           hour: 9,  // 0-23 (24-hour format)
           report_types: ['tasks', 'logs', 'training', 'inventory'],
         });
+
+
+        // Swamped Alert System
+        const [swampedMessage, setSwampedMessage] = useState("");
+        const [swampedRecipients, setSwampedRecipients] = useState("all"); // 'all', 'managers', 'specific'
+        const [swampedChannelId, setSwampedChannelId] = useState("");
 
         // Dashboard Features (Custom Pages)
         const [customPages, setCustomPages] = useState([]);
@@ -2636,8 +2643,8 @@
             priorityTimeLimits,
             logVisibilitySettings,
             multiStepTaskSettings,
-            discordConfig,
             reportSchedule,
+            discordConfig,
           };
 
           localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
@@ -2809,7 +2816,6 @@
               logVisibilitySettings,
               multiStepTaskSettings,
               discordConfig,
-              reportSchedule,
             };
 
             // POST to admin-config endpoint
@@ -3392,6 +3398,42 @@
                       label: "Quick Filters",
                       icon: "🎯",
                       keywords: ["search", "find", "sorting"],
+                    },
+                    {
+                      id: "swamped-alert",
+                      label: "Swamped Alert",
+                      icon: "🆘",
+                      keywords: ["alert", "swamped", "help", "broadcast"],
+                    },
+                    {
+                      id: "office-team-panel",
+                      label: "Office Team Panel",
+                      icon: "🏢",
+                      keywords: ["office", "shift", "recruitment", "ats", "fr"],
+                    },
+                    {
+                      id: "move-up-panel",
+                      label: "Move-Up Panel",
+                      icon: "📋",
+                      keywords: ["move", "up", "pest", "rodent", "sales"],
+                    },
+                    {
+                      id: "management-panel",
+                      label: "Management Panel",
+                      icon: "📊",
+                      keywords: ["management", "reservice", "meeting", "tutorial"],
+                    },
+                    {
+                      id: "alert-system",
+                      label: "Alert System",
+                      icon: "🚨",
+                      keywords: ["alert", "time", "evidence", "appointment"],
+                    },
+                    {
+                      id: "report-schedule",
+                      label: "Report Schedule",
+                      icon: "📅",
+                      keywords: ["report", "schedule", "automated", "weekly"],
                     },
                   ]
                     .filter((section) => {
@@ -8086,6 +8128,961 @@
                 )}
               </div>
             </div>
+
+
+                {/* Swamped Alert Section */}
+                {activeSection === "swamped-alert" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      🆘 Swamped Alert System
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Broadcast a "swamped" alert to notify team members when the office is overwhelmed.
+                      The alert will appear as a banner on the dashboard and can be sent to Discord.
+                    </p>
+
+                    <Accordion
+                      title="Send Swamped Alert"
+                      icon="📢"
+                      defaultOpen={true}
+                    >
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-white font-medium mb-2">
+                            Alert Message
+                          </label>
+                          <textarea
+                            value={swampedMessage}
+                            onChange={(e) => setSwampedMessage(e.target.value)}
+                            placeholder="e.g., Office is swamped! All hands on deck needed for urgent calls."
+                            className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                            rows="3"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-white font-medium mb-2">
+                            Who should see this alert?
+                          </label>
+                          <select
+                            value={swampedRecipients}
+                            onChange={(e) => setSwampedRecipients(e.target.value)}
+                            className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                          >
+                            <option value="all">Everyone (All Team Members)</option>
+                            <option value="managers">Managers Only</option>
+                            <option value="office">Office Staff</option>
+                            <option value="pest">Pest Technicians</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-white font-medium mb-2">
+                            Discord Channel ID (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={swampedChannelId}
+                            onChange={(e) => setSwampedChannelId(e.target.value)}
+                            placeholder="Enter Discord channel ID to post alert"
+                            className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                          />
+                          <p className="text-gray-400 text-xs mt-1">
+                            Leave blank to only show on dashboard
+                          </p>
+                        </div>
+
+                        <div className="bg-yellow-500 bg-opacity-20 border-l-4 border-yellow-500 p-4 rounded">
+                          <p className="text-yellow-200 text-sm">
+                            <strong>⚠️ Preview:</strong> When you send this alert, it will:
+                          </p>
+                          <ul className="text-yellow-100 text-sm mt-2 ml-4 list-disc space-y-1">
+                            <li>Show a banner on the dashboard for all users</li>
+                            <li>Save to localStorage for persistence across page refreshes</li>
+                            {swampedChannelId && (
+                              <li>Post to Discord channel {swampedChannelId}</li>
+                            )}
+                          </ul>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (!swampedMessage.trim()) {
+                              showNotification("Please enter a message", "error");
+                              return;
+                            }
+
+                            // Save to localStorage
+                            const alert = {
+                              message: swampedMessage,
+                              recipients: swampedRecipients,
+                              timestamp: new Date().toISOString(),
+                              active: true,
+                            };
+                            localStorage.setItem(
+                              "bottyotty-swamped-alert",
+                              JSON.stringify(alert)
+                            );
+
+                            // Call API if channel ID provided
+                            if (swampedChannelId.trim()) {
+                              fetch(`${apiUrl}/api/swamped-alert`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  message: swampedMessage,
+                                  recipients: swampedRecipients,
+                                  channelId: swampedChannelId,
+                                }),
+                              })
+                                .then((res) => res.json())
+                                .then((data) => {
+                                  if (data.success) {
+                                    showNotification(
+                                      "🆘 Swamped alert sent successfully!",
+                                      "success"
+                                    );
+                                  } else {
+                                    showNotification(
+                                      "Alert saved locally but Discord post failed",
+                                      "warning"
+                                    );
+                                  }
+                                })
+                                .catch((err) => {
+                                  console.error("Error sending to Discord:", err);
+                                  showNotification(
+                                    "Alert saved locally but Discord post failed",
+                                    "warning"
+                                  );
+                                });
+                            } else {
+                              showNotification(
+                                "🆘 Swamped alert activated on dashboard!",
+                                "success"
+                              );
+                            }
+
+                            // Clear form
+                            setSwampedMessage("");
+                            setSwampedChannelId("");
+                          }}
+                          className="save-button px-6 py-3 text-white rounded-lg font-bold w-full"
+                        >
+                          🆘 Send Swamped Alert
+                        </button>
+                      </div>
+                    </Accordion>
+
+                    <Accordion title="Active Alert" icon="📋" defaultOpen={true}>
+                      <div className="space-y-4">
+                        {(() => {
+                          const activeAlert = localStorage.getItem(
+                            "bottyotty-swamped-alert"
+                          );
+                          if (!activeAlert) {
+                            return (
+                              <p className="text-gray-300 text-center py-8">
+                                No active swamped alert
+                              </p>
+                            );
+                          }
+
+                          try {
+                            const alert = JSON.parse(activeAlert);
+                            if (!alert.active) {
+                              return (
+                                <p className="text-gray-300 text-center py-8">
+                                  No active swamped alert
+                                </p>
+                              );
+                            }
+
+                            return (
+                              <div className="bg-red-500 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="text-white font-bold">
+                                    🆘 Active Alert
+                                  </h4>
+                                  <span className="text-gray-300 text-xs">
+                                    {new Date(alert.timestamp).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-white mb-3">{alert.message}</p>
+                                <p className="text-gray-300 text-sm mb-3">
+                                  Recipients: {alert.recipients}
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        "Clear this swamped alert? It will be removed from the dashboard."
+                                      )
+                                    ) {
+                                      const updatedAlert = {
+                                        ...alert,
+                                        active: false,
+                                      };
+                                      localStorage.setItem(
+                                        "bottyotty-swamped-alert",
+                                        JSON.stringify(updatedAlert)
+                                      );
+                                      showNotification(
+                                        "Alert cleared",
+                                        "success"
+                                      );
+                                      // Force re-render
+                                      setLoading(!loading);
+                                    }
+                                  }}
+                                  className="delete-button px-4 py-2 text-white rounded-lg text-sm"
+                                >
+                                  ✅ Clear Alert
+                                </button>
+                              </div>
+                            );
+                          } catch (e) {
+                            console.error("Error parsing alert:", e);
+                            return (
+                              <p className="text-gray-300 text-center py-8">
+                                Error loading alert
+                              </p>
+                            );
+                          }
+                        })()}
+                      </div>
+                    </Accordion>
+
+                    <div className="mt-6 bg-blue-500 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        💡 How to use Swamped Alerts:
+                      </h4>
+                      <ol className="text-gray-200 text-sm space-y-1 list-decimal ml-4">
+                        <li>Write a clear, urgent message about the situation</li>
+                        <li>Select who should see the alert</li>
+                        <li>Optionally add Discord channel ID for wider reach</li>
+                        <li>Click "Send Swamped Alert"</li>
+                        <li>Alert will appear as a banner on the dashboard</li>
+                        <li>Clear the alert when the situation is resolved</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Office Team Panel Section */}
+                {activeSection === "office-team-panel" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      🏢 Office Team Panel
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Manage office team operations including ATS IT issues, shift coverage,
+                      FR IT problems, recruitment, and pending cancellations.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Accordion title="ATS IT Issue" icon="🖥️" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-blue-200 text-sm">
+                              <strong>Routes to:</strong> IT Channel<br/>
+                              <strong>Database:</strong> task_type: 'office-team', category: 'ATS IT'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Report issues with the ATS (Applicant Tracking System) including login problems,
+                            data sync errors, or system functionality issues.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure ATS IT Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="Shift Cover" icon="📅" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-blue-200 text-sm">
+                              <strong>Routes to:</strong> Operations Channel<br/>
+                              <strong>Database:</strong> task_type: 'office-team', category: 'Shift Cover'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Request shift coverage when an office team member needs time off or has an emergency.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Shift Cover Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="FR IT Issue" icon="⚙️" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-blue-200 text-sm">
+                              <strong>Routes to:</strong> IT Channel<br/>
+                              <strong>Database:</strong> task_type: 'office-team', category: 'FR IT'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Report FieldRoutes issues including module errors, sync problems, or data discrepancies.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure FR IT Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="Recruitment" icon="👥" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-blue-200 text-sm">
+                              <strong>Routes to:</strong> HR Channel<br/>
+                              <strong>Database:</strong> task_type: 'office-team', category: 'Recruitment'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Submit recruitment needs for open positions including urgency level and requirements.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Recruitment Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="Pending Cancellation" icon="⚠️" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-blue-200 text-sm">
+                              <strong>Routes to:</strong> Customer Service<br/>
+                              <strong>Database:</strong> task_type: 'office-team', category: 'Cancellation'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Report customers threatening cancellation and attempts to save the account.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Cancellation Modal
+                          </button>
+                        </div>
+                      </Accordion>
+                    </div>
+
+                    <div className="mt-6 bg-purple-500 bg-opacity-20 border-l-4 border-purple-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        📝 Office Team Panel Information
+                      </h4>
+                      <p className="text-gray-200 text-sm mb-2">
+                        This panel provides office staff with quick access to common office operations:
+                      </p>
+                      <ul className="text-gray-200 text-sm space-y-1 list-disc ml-4">
+                        <li><strong>ATS IT Issues:</strong> Technical problems with applicant tracking</li>
+                        <li><strong>Shift Coverage:</strong> Request coverage for absences</li>
+                        <li><strong>FR IT Issues:</strong> FieldRoutes system problems</li>
+                        <li><strong>Recruitment:</strong> Submit hiring needs</li>
+                        <li><strong>Pending Cancellations:</strong> Track at-risk customers</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Move-Up Panel Section */}
+                {activeSection === "move-up-panel" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      📋 Move-Up Panel
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Prioritize urgent jobs and move them up in the schedule across all service types.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <Accordion title="🪲 Pest Job" icon="🪲" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-green-200 text-sm">
+                              <strong>Routes to:</strong> #move-up-log + Operations<br/>
+                              <strong>Database:</strong> task_type: 'move-up', category: 'Pest'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Move pest control jobs up in priority. Includes customer info, phone, address, reason, and priority level.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Pest Move-Up
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="🐀 Rodent Job" icon="🐀" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-green-200 text-sm">
+                              <strong>Routes to:</strong> #move-up-log + Operations<br/>
+                              <strong>Database:</strong> task_type: 'move-up', category: 'Rodent'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Prioritize rodent control jobs for urgent situations requiring immediate attention.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Rodent Move-Up
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="💩 Insulation Job" icon="💩" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-green-200 text-sm">
+                              <strong>Routes to:</strong> #move-up-log + Operations<br/>
+                              <strong>Database:</strong> task_type: 'move-up', category: 'Insulation'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Move insulation jobs up for customers needing urgent attic cleanup or installation.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Insulation Move-Up
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="🤑 Sales Inspection" icon="🤑" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-green-200 text-sm">
+                              <strong>Routes to:</strong> #move-up-log + Sales<br/>
+                              <strong>Database:</strong> task_type: 'move-up', category: 'Sales'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Prioritize sales inspections for hot leads or time-sensitive opportunities.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Sales Move-Up
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="🐜 Termite Job" icon="🐜" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-green-200 text-sm">
+                              <strong>Routes to:</strong> #move-up-log + Operations<br/>
+                              <strong>Database:</strong> task_type: 'move-up', category: 'Termite'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Move termite inspections or treatments up for urgent structural damage situations.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Termite Move-Up
+                          </button>
+                        </div>
+                      </Accordion>
+                    </div>
+
+                    <div className="mt-6 bg-yellow-500 bg-opacity-20 border-l-4 border-yellow-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        📝 Move-Up Panel Usage
+                      </h4>
+                      <p className="text-gray-200 text-sm mb-2">
+                        Use this panel to prioritize urgent jobs that need immediate attention:
+                      </p>
+                      <ul className="text-gray-200 text-sm space-y-1 list-disc ml-4">
+                        <li>All move-ups are logged to #move-up-log channel</li>
+                        <li>Jobs are routed to appropriate operations or sales channels</li>
+                        <li>Include customer details: name, phone, address</li>
+                        <li>Specify the reason and priority level (High/Urgent/Critical)</li>
+                        <li>Operations team will be notified immediately</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Management Panel Section */}
+                {activeSection === "management-panel" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      📊 Management Panel
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Management-only tools for weekly reservice tracking, passwords, meeting notes, documents, and tutorials.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Accordion title="📊 Weekly Reservice" icon="📊" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-indigo-500 bg-opacity-10 border border-indigo-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-indigo-200 text-sm">
+                              <strong>Routes to:</strong> Management Channel (Public)<br/>
+                              <strong>Database:</strong> task_type: 'management', category: 'Weekly Reserves'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Track weekly reservice requests including total count, resolved, pending, and notes.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Weekly Reservice Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="🔐 Manager Password" icon="🔐" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-red-500 bg-opacity-10 border border-red-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-red-200 text-sm">
+                              <strong>Routes to:</strong> Management Channel (EPHEMERAL)<br/>
+                              <strong>Database:</strong> task_type: 'management', category: 'Passwords'<br/>
+                              <strong>⚠️ Security:</strong> Message visible only to sender
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Securely store system passwords. Messages are ephemeral (only visible to you).
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🔒 Configure Password Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="📝 Meeting Notes" icon="📝" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-indigo-500 bg-opacity-10 border border-indigo-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-indigo-200 text-sm">
+                              <strong>Routes to:</strong> Management Channel (Public)<br/>
+                              <strong>Database:</strong> task_type: 'management', category: 'Meeting Notes'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Document meeting notes with title, date, attendees, and key discussion points.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Meeting Notes Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="📄 Manager Document" icon="📄" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-indigo-500 bg-opacity-10 border border-indigo-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-indigo-200 text-sm">
+                              <strong>Routes to:</strong> Management Channel (Public)<br/>
+                              <strong>Database:</strong> task_type: 'management', category: 'Manager Docs'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Share important management documents with title, category, link, and tags.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Document Modal
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="🎓 Manager Tutorial" icon="🎓" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-indigo-500 bg-opacity-10 border border-indigo-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-indigo-200 text-sm">
+                              <strong>Routes to:</strong> Management Channel (Public)<br/>
+                              <strong>Database:</strong> task_type: 'management', category: 'Tutorials'
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Create step-by-step tutorials for software or processes with difficulty rating.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Tutorial Modal
+                          </button>
+                        </div>
+                      </Accordion>
+                    </div>
+
+                    <div className="mt-6 bg-red-500 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        🔒 Security Notice - Manager Password
+                      </h4>
+                      <p className="text-gray-200 text-sm mb-2">
+                        The Manager Password modal posts EPHEMERAL messages that are only visible to you.
+                        This ensures sensitive credentials are never publicly visible in channels.
+                      </p>
+                      <p className="text-red-200 text-sm font-semibold">
+                        ⚠️ Access to this panel is restricted to management users only.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Alert System Section */}
+                {activeSection === "alert-system" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      🚨 Alert System
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Quick alerts that post directly to Discord without saving to database.
+                      Perfect for time-sensitive updates and notifications.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Accordion title="⏰ Time Update" icon="⏰" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-cyan-500 bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-cyan-200 text-sm">
+                              <strong>Posts to:</strong> #management-alerts<br/>
+                              <strong>Type:</strong> Direct Discord embed (no database)<br/>
+                              <strong>Fields:</strong> update_type, details, estimated_time
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Quick time updates for route delays, early arrivals, or schedule changes.
+                          </p>
+                          <div className="space-y-2">
+                            <label className="block text-white font-medium text-sm">
+                              Target Channel ID
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Enter Discord channel ID"
+                              className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                            />
+                          </div>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Time Update Alert
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="📸 Customer Evidence" icon="📸" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-cyan-500 bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-cyan-200 text-sm">
+                              <strong>Posts to:</strong> #management-alerts<br/>
+                              <strong>Type:</strong> Direct Discord embed (no database)<br/>
+                              <strong>Fields:</strong> customer, evidence_type, description, link
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Share customer evidence like photos, videos, or documents for immediate review.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Evidence Alert
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="📅 Pending Appointment" icon="📅" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-cyan-500 bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-cyan-200 text-sm">
+                              <strong>Posts to:</strong> #management-alerts<br/>
+                              <strong>Type:</strong> Direct Discord embed (no database)<br/>
+                              <strong>Fields:</strong> customer, date, status, notes
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            Alert team about appointments needing attention or confirmation.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure Appointment Alert
+                          </button>
+                        </div>
+                      </Accordion>
+
+                      <Accordion title="📢 General Alert" icon="📢" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <div className="bg-cyan-500 bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg p-4 mb-4">
+                            <p className="text-cyan-200 text-sm">
+                              <strong>Posts to:</strong> #management-alerts<br/>
+                              <strong>Type:</strong> Direct Discord embed (no database)<br/>
+                              <strong>Fields:</strong> title, category, message, urgency
+                            </p>
+                          </div>
+                          <p className="text-gray-300 text-sm">
+                            General employee alerts for announcements, reminders, or urgent notifications.
+                          </p>
+                          <button className="save-button px-4 py-2 text-white rounded-lg w-full">
+                            🎯 Configure General Alert
+                          </button>
+                        </div>
+                      </Accordion>
+                    </div>
+
+                    <div className="mt-6 bg-cyan-500 bg-opacity-20 border-l-4 border-cyan-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        💡 How Alert System Works
+                      </h4>
+                      <p className="text-gray-200 text-sm mb-2">
+                        Unlike other panels, alerts post directly to Discord as embeds without saving to the database:
+                      </p>
+                      <ul className="text-gray-200 text-sm space-y-1 list-disc ml-4">
+                        <li><strong>Instant:</strong> Posted immediately to specified channel</li>
+                        <li><strong>No Database:</strong> Not stored in tasks.db</li>
+                        <li><strong>Flexible:</strong> Can target any Discord channel</li>
+                        <li><strong>Command:</strong> Use /alert in Discord to trigger modals</li>
+                        <li><strong>Access:</strong> Available to all employees</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Report Schedule Section */}
+                {activeSection === "report-schedule" && (
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-6">
+                      📅 Automated Report Schedule
+                    </h2>
+                    <p className="text-gray-300 mb-6">
+                      Configure automated reports to be generated and sent on a regular schedule.
+                    </p>
+
+                    <Accordion
+                      title="Schedule Configuration"
+                      icon="⚙️"
+                      defaultOpen={true}
+                    >
+                      <div className="space-y-4">
+                        <div>
+                          <label className="flex items-center space-x-3 mb-4">
+                            <input
+                              type="checkbox"
+                              checked={reportSchedule.enabled}
+                              onChange={(e) =>
+                                setReportSchedule({
+                                  ...reportSchedule,
+                                  enabled: e.target.checked,
+                                })
+                              }
+                              className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-white font-medium">
+                              Enable Automated Reports
+                            </span>
+                          </label>
+                        </div>
+
+                        {reportSchedule.enabled && (
+                          <>
+                            <div>
+                              <label className="block text-white font-medium mb-2">
+                                Schedule Type
+                              </label>
+                              <select
+                                value={reportSchedule.schedule_type}
+                                onChange={(e) =>
+                                  setReportSchedule({
+                                    ...reportSchedule,
+                                    schedule_type: e.target.value,
+                                  })
+                                }
+                                className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                              >
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
+
+                            {reportSchedule.schedule_type === "weekly" && (
+                              <div>
+                                <label className="block text-white font-medium mb-2">
+                                  Day of Week
+                                </label>
+                                <select
+                                  value={reportSchedule.day}
+                                  onChange={(e) =>
+                                    setReportSchedule({
+                                      ...reportSchedule,
+                                      day: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                                >
+                                  <option value="Monday">Monday</option>
+                                  <option value="Tuesday">Tuesday</option>
+                                  <option value="Wednesday">Wednesday</option>
+                                  <option value="Thursday">Thursday</option>
+                                  <option value="Friday">Friday</option>
+                                  <option value="Saturday">Saturday</option>
+                                  <option value="Sunday">Sunday</option>
+                                </select>
+                              </div>
+                            )}
+
+                            {reportSchedule.schedule_type === "monthly" && (
+                              <div>
+                                <label className="block text-white font-medium mb-2">
+                                  Day of Month
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="31"
+                                  value={reportSchedule.day_of_month}
+                                  onChange={(e) =>
+                                    setReportSchedule({
+                                      ...reportSchedule,
+                                      day_of_month: parseInt(e.target.value),
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                                />
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-white font-medium mb-2">
+                                Time of Day (24-hour format)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="23"
+                                value={reportSchedule.hour}
+                                onChange={(e) =>
+                                  setReportSchedule({
+                                    ...reportSchedule,
+                                    hour: parseInt(e.target.value),
+                                  })
+                                }
+                                className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30"
+                              />
+                              <p className="text-gray-400 text-xs mt-1">
+                                Enter hour in 24-hour format (0-23)
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block text-white font-medium mb-2">
+                                Report Types
+                              </label>
+                              <div className="space-y-2">
+                                {[
+                                  { id: "tasks", label: "Task Reports" },
+                                  { id: "logs", label: "Activity Logs" },
+                                  { id: "training", label: "Training Records" },
+                                  { id: "inventory", label: "Inventory Status" },
+                                ].map((type) => (
+                                  <label
+                                    key={type.id}
+                                    className="flex items-center space-x-3"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={reportSchedule.report_types.includes(
+                                        type.id
+                                      )}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setReportSchedule({
+                                            ...reportSchedule,
+                                            report_types: [
+                                              ...reportSchedule.report_types,
+                                              type.id,
+                                            ],
+                                          });
+                                        } else {
+                                          setReportSchedule({
+                                            ...reportSchedule,
+                                            report_types:
+                                              reportSchedule.report_types.filter(
+                                                (t) => t !== type.id
+                                              ),
+                                          });
+                                        }
+                                      }}
+                                      className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-gray-200 text-sm">
+                                      {type.label}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </Accordion>
+
+                    <Accordion title="Current Schedule" icon="📋" defaultOpen={true}>
+                      <div className="space-y-4">
+                        {!reportSchedule.enabled ? (
+                          <p className="text-gray-300 text-center py-8">
+                            Automated reports are currently disabled
+                          </p>
+                        ) : (
+                          <div className="bg-blue-500 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+                            <h4 className="text-white font-bold mb-3">
+                              📅 Active Schedule
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              <p className="text-gray-200">
+                                <strong>Frequency:</strong>{" "}
+                                {reportSchedule.schedule_type.charAt(0).toUpperCase() +
+                                  reportSchedule.schedule_type.slice(1)}
+                              </p>
+                              {reportSchedule.schedule_type === "weekly" && (
+                                <p className="text-gray-200">
+                                  <strong>Day:</strong> {reportSchedule.day}
+                                </p>
+                              )}
+                              {reportSchedule.schedule_type === "monthly" && (
+                                <p className="text-gray-200">
+                                  <strong>Day of Month:</strong>{" "}
+                                  {reportSchedule.day_of_month}
+                                </p>
+                              )}
+                              <p className="text-gray-200">
+                                <strong>Time:</strong> {reportSchedule.hour}:00 (
+                                {reportSchedule.hour < 12
+                                  ? reportSchedule.hour + " AM"
+                                  : reportSchedule.hour === 12
+                                    ? "12 PM"
+                                    : reportSchedule.hour - 12 + " PM"}
+                                )
+                              </p>
+                              <p className="text-gray-200">
+                                <strong>Reports:</strong>{" "}
+                                {reportSchedule.report_types.join(", ")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Accordion>
+
+                    <button
+                      onClick={saveConfig}
+                      className="save-button px-6 py-3 text-white rounded-lg font-bold mt-6 w-full"
+                    >
+                      💾 Save Report Schedule
+                    </button>
+
+                    <div className="mt-6 bg-green-500 bg-opacity-20 border-l-4 border-green-500 p-4 rounded">
+                      <h4 className="text-white font-bold mb-2">
+                        📝 Automated Reports Information
+                      </h4>
+                      <p className="text-gray-200 text-sm mb-2">
+                        Configure automated reports to be generated and sent on a regular schedule:
+                      </p>
+                      <ul className="text-gray-200 text-sm space-y-1 list-disc ml-4">
+                        <li>Choose daily, weekly, or monthly frequency</li>
+                        <li>Set specific day and time for report generation</li>
+                        <li>Select which report types to include</li>
+                        <li>Reports will be automatically posted to designated channels</li>
+                        <li>All schedules are saved to configuration</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
 
             {/* Footer */}
             <div className="glass rounded-xl p-4 mt-6 text-center">

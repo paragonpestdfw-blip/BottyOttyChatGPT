@@ -1365,6 +1365,332 @@ def update_admin_config():
         print(f"ERROR in /api/admin-config: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/swamped-alert', methods=['POST'])
+def swamped_alert():
+    """
+    Handle swamped alert broadcasts from Admin Panel.
+    Posts to Discord and stores alert state.
+    """
+    try:
+        data = request.json
+        message = data.get('message', '')
+        recipients = data.get('recipients', 'all')
+        channel_id = data.get('channelId', '')
+
+        if not message:
+            return jsonify({'success': False, 'error': 'Message is required'}), 400
+
+        # Build alert embed
+        embed = discord.Embed(
+            title="🆘 SWAMPED ALERT",
+            description=message,
+            color=discord.Color.red(),
+            timestamp=datetime.now()
+        )
+        embed.add_field(name="Recipients", value=recipients.upper(), inline=False)
+        embed.add_field(
+            name="Action Required",
+            value="⚠️ Office needs immediate assistance!",
+            inline=False
+        )
+        embed.set_footer(text="Swamped Alert System")
+
+        # Post to Discord channel
+        if channel_id:
+            async def send_to_discord():
+                try:
+                    channel = bot.get_channel(int(channel_id))
+                    if channel:
+                        await channel.send(embed=embed)
+                        # Optionally mention @everyone or specific role
+                        if recipients == 'all':
+                            await channel.send("@everyone")
+                        logger.info(f"✅ Swamped alert sent to channel {channel_id}")
+                    else:
+                        logger.error(f"❌ Channel {channel_id} not found")
+                except Exception as e:
+                    logger.error(f"❌ Error sending swamped alert: {e}")
+
+            # Schedule the async task
+            bot.loop.create_task(send_to_discord())
+
+        return jsonify({
+            'success': True,
+            'message': 'Swamped alert sent successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error in swamped alert endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/office-team', methods=['POST'])
+def office_team_operation():
+    """
+    Handle Office Team Panel operations from Admin Panel.
+    Operations: ATS IT Issue, Shift Cover, FR IT Issue, Recruitment, Pending Cancellation
+    """
+    try:
+        data = request.json
+        operation_type = data.get('operationType', '')
+        title = data.get('title', '')
+        description = data.get('description', '')
+        urgency = data.get('urgency', 'medium')
+        details = data.get('details', {})
+
+        if not operation_type or not title:
+            return jsonify({'success': False, 'error': 'Operation type and title required'}), 400
+
+        # Build embed
+        color_map = {'low': discord.Color.blue(), 'medium': discord.Color.orange(), 'high': discord.Color.red()}
+        embed = discord.Embed(
+            title=f"🏢 Office Team: {operation_type}",
+            description=description,
+            color=color_map.get(urgency, discord.Color.blue()),
+            timestamp=datetime.now()
+        )
+        embed.add_field(name="Title", value=title, inline=False)
+        embed.add_field(name="Urgency", value=urgency.upper(), inline=True)
+
+        # Add operation-specific fields
+        for key, value in details.items():
+            if value:
+                embed.add_field(name=key.replace('_', ' ').title(), value=str(value), inline=True)
+
+        embed.set_footer(text=f"Office Team Panel • {operation_type}")
+
+        # Post to office operations log channel
+        async def send_to_discord():
+            try:
+                channel_id = CONFIG.get('global_logs', {}).get('office_operations')
+                if channel_id:
+                    channel = bot.get_channel(channel_id)
+                    if channel:
+                        await channel.send(embed=embed)
+                        logger.info(f"✅ Office team operation posted: {operation_type}")
+            except Exception as e:
+                logger.error(f"❌ Error posting office team operation: {e}")
+
+        bot.loop.create_task(send_to_discord())
+
+        # Save to database
+        add_task(
+            title=f"{operation_type}: {title}",
+            description=description,
+            created_by="Admin Panel",
+            task_type="office-team",
+            category=operation_type
+        )
+
+        return jsonify({'success': True, 'message': f'{operation_type} operation submitted'})
+
+    except Exception as e:
+        logger.error(f"❌ Error in office-team endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/move-up', methods=['POST'])
+def move_up_job():
+    """
+    Handle Move-Up Panel job submissions from Admin Panel.
+    Job types: Pest, Rodent, Insulation, Sales, Termite
+    """
+    try:
+        data = request.json
+        job_type = data.get('jobType', '')
+        customer = data.get('customer', '')
+        phone = data.get('phone', '')
+        address = data.get('address', '')
+        reason = data.get('reason', '')
+        priority = data.get('priority', 'medium')
+        notes = data.get('notes', '')
+
+        if not job_type or not customer:
+            return jsonify({'success': False, 'error': 'Job type and customer required'}), 400
+
+        # Build embed
+        job_icons = {'Pest': '🪲', 'Rodent': '🐀', 'Insulation': '💩', 'Sales': '🤑', 'Termite': '🐜'}
+        color_map = {'low': discord.Color.blue(), 'medium': discord.Color.orange(), 'high': discord.Color.red()}
+
+        embed = discord.Embed(
+            title=f"{job_icons.get(job_type, '📋')} {job_type} Move-Up: {customer}",
+            description=reason,
+            color=color_map.get(priority, discord.Color.orange()),
+            timestamp=datetime.now()
+        )
+        embed.add_field(name="Customer", value=customer, inline=False)
+        if phone:
+            embed.add_field(name="Phone", value=phone, inline=True)
+        if address:
+            embed.add_field(name="Address", value=address, inline=False)
+        embed.add_field(name="Priority", value=priority.upper(), inline=True)
+        if notes:
+            embed.add_field(name="Notes", value=notes, inline=False)
+        embed.set_footer(text=f"Move-Up Panel • {job_type}")
+
+        # Post to move-up log channel
+        async def send_to_discord():
+            try:
+                channel_id = CONFIG.get('global_logs', {}).get('move_up')
+                if channel_id:
+                    channel = bot.get_channel(channel_id)
+                    if channel:
+                        await channel.send(embed=embed)
+                        logger.info(f"✅ Move-up posted: {job_type} - {customer}")
+            except Exception as e:
+                logger.error(f"❌ Error posting move-up: {e}")
+
+        bot.loop.create_task(send_to_discord())
+
+        # Save to database
+        add_task(
+            title=f"{job_type} Move-Up: {customer}",
+            description=f"Phone: {phone}\nAddress: {address}\nReason: {reason}\nNotes: {notes}",
+            created_by="Admin Panel",
+            task_type="move-up",
+            category=job_type
+        )
+
+        return jsonify({'success': True, 'message': f'{job_type} move-up submitted for {customer}'})
+
+    except Exception as e:
+        logger.error(f"❌ Error in move-up endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/management-panel', methods=['POST'])
+def management_tool():
+    """
+    Handle Management Panel tool submissions from Admin Panel.
+    Tools: Weekly Reservice, Manager Password, Meeting Notes, Manager Docs, Tutorials
+    """
+    try:
+        data = request.json
+        tool_type = data.get('toolType', '')
+        title = data.get('title', '')
+        content = data.get('content', '')
+        details = data.get('details', {})
+
+        if not tool_type or not title:
+            return jsonify({'success': False, 'error': 'Tool type and title required'}), 400
+
+        # Build embed
+        tool_icons = {
+            'Weekly Reservice': '📊',
+            'Manager Password': '🔐',
+            'Meeting Notes': '📝',
+            'Manager Document': '📄',
+            'Manager Tutorial': '🎓'
+        }
+
+        embed = discord.Embed(
+            title=f"{tool_icons.get(tool_type, '📊')} {tool_type}",
+            description=title,
+            color=discord.Color.blue(),
+            timestamp=datetime.now()
+        )
+
+        if content:
+            embed.add_field(name="Content", value=content[:1024], inline=False)
+
+        # Add tool-specific fields
+        for key, value in details.items():
+            if value:
+                embed.add_field(name=key.replace('_', ' ').title(), value=str(value)[:1024], inline=True)
+
+        embed.set_footer(text=f"Management Panel • {tool_type}")
+
+        # Post to management channel (passwords are ephemeral - not posted)
+        if tool_type != 'Manager Password':
+            async def send_to_discord():
+                try:
+                    channel_id = CONFIG.get('special_channels', {}).get('management_alerts')
+                    if channel_id:
+                        channel = bot.get_channel(channel_id)
+                        if channel:
+                            await channel.send(embed=embed)
+                            logger.info(f"✅ Management tool posted: {tool_type}")
+                except Exception as e:
+                    logger.error(f"❌ Error posting management tool: {e}")
+
+            bot.loop.create_task(send_to_discord())
+
+        # Save to database (passwords saved with special handling)
+        add_task(
+            title=f"{tool_type}: {title}",
+            description=content,
+            created_by="Admin Panel",
+            task_type="management",
+            category=tool_type
+        )
+
+        return jsonify({'success': True, 'message': f'{tool_type} submitted'})
+
+    except Exception as e:
+        logger.error(f"❌ Error in management-panel endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/alert', methods=['POST'])
+def employee_alert():
+    """
+    Handle Alert System submissions from Admin Panel.
+    Alert types: Time Update, Customer Evidence, Pending Appointment, General Alert
+    """
+    try:
+        data = request.json
+        alert_type = data.get('alertType', '')
+        title = data.get('title', '')
+        message = data.get('message', '')
+        urgency = data.get('urgency', 'medium')
+        details = data.get('details', {})
+
+        if not alert_type or not message:
+            return jsonify({'success': False, 'error': 'Alert type and message required'}), 400
+
+        # Build embed
+        alert_icons = {
+            'Time Update': '⏰',
+            'Customer Evidence': '📸',
+            'Pending Appointment': '📅',
+            'General Alert': '📢'
+        }
+        color_map = {'low': discord.Color.blue(), 'medium': discord.Color.orange(), 'high': discord.Color.red()}
+
+        embed = discord.Embed(
+            title=f"{alert_icons.get(alert_type, '🚨')} {alert_type}",
+            description=message,
+            color=color_map.get(urgency, discord.Color.orange()),
+            timestamp=datetime.now()
+        )
+
+        if title:
+            embed.add_field(name="Title", value=title, inline=False)
+        embed.add_field(name="Urgency", value=urgency.upper(), inline=True)
+
+        # Add alert-specific fields
+        for key, value in details.items():
+            if value:
+                embed.add_field(name=key.replace('_', ' ').title(), value=str(value)[:1024], inline=True)
+
+        embed.set_footer(text=f"Alert System • {alert_type}")
+
+        # Post to management alerts channel
+        async def send_to_discord():
+            try:
+                channel_id = CONFIG.get('special_channels', {}).get('management_alerts')
+                if channel_id:
+                    channel = bot.get_channel(channel_id)
+                    if channel:
+                        await channel.send(embed=embed)
+                        logger.info(f"✅ Alert posted: {alert_type}")
+            except Exception as e:
+                logger.error(f"❌ Error posting alert: {e}")
+
+        bot.loop.create_task(send_to_discord())
+
+        return jsonify({'success': True, 'message': f'{alert_type} alert sent'})
+
+    except Exception as e:
+        logger.error(f"❌ Error in alert endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/')
 def home():
     """Root endpoint"""
