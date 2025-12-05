@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Vehicle Management</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+      * { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+      .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+      const API_URL = "https://bottyotty-production.up.railway.app";
+
+      function VehicleManagement() {
+        const [vehicles, setVehicles] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [showAdd, setShowAdd] = useState(false);
+        const [editing, setEditing] = useState(null);
+        const [form, setForm] = useState({
+          name: "", plate: "", vin: "", year: "", make: "", model: "",
+          mileage: "", lastService: "", nextService: "", assignedTo: "",
+          status: "active", notes: ""
+        });
+
+        useEffect(() => { loadVehicles(); }, []);
+
+        const loadVehicles = async () => {
+          try {
+            const response = await fetch(`${API_URL}/api/vehicles`);
+            const data = await response.json();
+            if (data.success) {
+              setVehicles(data.vehicles);
+            }
+          } catch (error) {
+            console.error("Error loading vehicles:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const saveVehicle = async () => {
+          if (!form.name || !form.plate) return alert("Name and plate required");
+          try {
+            if (editing) {
+              const response = await fetch(`${API_URL}/api/vehicles/${editing.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+              });
+              const data = await response.json();
+              if (data.success) loadVehicles();
+            } else {
+              const response = await fetch(`${API_URL}/api/vehicles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+              });
+              const data = await response.json();
+              if (data.success) loadVehicles();
+            }
+            setForm({ name: "", plate: "", vin: "", year: "", make: "", model: "", mileage: "", lastService: "", nextService: "", assignedTo: "", status: "active", notes: "" });
+            setShowAdd(false);
+            setEditing(null);
+          } catch (error) {
+            console.error("Error saving vehicle:", error);
+            alert("Failed to save vehicle");
+          }
+        };
+
+        const deleteVehicle = async (id) => {
+          if (!confirm("Delete this vehicle?")) return;
+          try {
+            const response = await fetch(`${API_URL}/api/vehicles/${id}`, {
+              method: 'DELETE'
+            });
+            const data = await response.json();
+            if (data.success) loadVehicles();
+          } catch (error) {
+            console.error("Error deleting vehicle:", error);
+          }
+        };
+
+        const editVehicle = (v) => { setEditing(v); setForm(v); setShowAdd(true); };
+
+        if (loading) {
+          return (
+            <div className="min-h-screen p-8 flex items-center justify-center">
+              <div className="glass rounded-2xl p-8 text-center">
+                <p className="text-white text-xl">Loading vehicles...</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen p-8">
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="/mnt/user-data/uploads/Botty_Otty_Logo.png" alt="Logo" className="w-16 h-16" onError={e => e.target.style.display='none'} />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white">🚗 Vehicle Management</h1>
+                    <p className="text-gray-200 text-sm">Track company vehicles, maintenance & assignments</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href="dashboard.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">🏠 Dashboard</a>
+                  <a href="admin.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">⚙️ Admin</a>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Total Vehicles</p>
+                <p className="text-5xl font-bold text-white">{vehicles.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Active</p>
+                <p className="text-5xl font-bold text-green-400">{vehicles.filter(v => v.status === 'active').length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Maintenance Due</p>
+                <p className="text-5xl font-bold text-red-400">{vehicles.filter(v => v.nextService && new Date(v.nextService) < new Date()).length}</p>
+              </div>
+            </div>
+
+            <button onClick={() => setShowAdd(true)} className="w-full mb-6 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg">
+              ➕ Add Vehicle
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {vehicles.map(v => (
+                <div key={v.id} className="glass rounded-xl p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{v.name}</h3>
+                      <p className="text-gray-300 text-sm">{v.plate}</p>
+                    </div>
+                    <span className={\`px-3 py-1 rounded-full text-xs font-bold \${v.status === 'active' ? 'bg-green-500' : 'bg-red-500'} text-white\`}>
+                      {v.status}
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-200 mb-4">
+                    {v.make && <p>🚙 {v.year} {v.make} {v.model}</p>}
+                    {v.mileage && <p>📏 {v.mileage} miles</p>}
+                    {v.assignedTo && <p>👤 {v.assignedTo}</p>}
+                    {v.nextService && <p>🔧 Next Service: {v.nextService}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => editVehicle(v)} className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">Edit</button>
+                    <button onClick={() => deleteVehicle(v.id)} className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {showAdd && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full my-8">
+                  <h3 className="text-2xl font-bold text-white mb-6">{editing ? 'Edit Vehicle' : 'Add Vehicle'}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input placeholder="Vehicle Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="col-span-2 px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="License Plate *" value={form.plate} onChange={e => setForm({...form, plate: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="VIN" value={form.vin} onChange={e => setForm({...form, vin: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Year" value={form.year} onChange={e => setForm({...form, year: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Make" value={form.make} onChange={e => setForm({...form, make: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Model" value={form.model} onChange={e => setForm({...form, model: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Mileage" value={form.mileage} onChange={e => setForm({...form, mileage: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input type="date" placeholder="Last Service" value={form.lastService} onChange={e => setForm({...form, lastService: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input type="date" placeholder="Next Service" value={form.nextService} onChange={e => setForm({...form, nextService: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input placeholder="Assigned To" value={form.assignedTo} onChange={e => setForm({...form, assignedTo: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="active">Active</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <textarea placeholder="Notes" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="col-span-2 px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="3" />
+                  </div>
+                  <div className="flex gap-2 mt-6">
+                    <button onClick={saveVehicle} className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold">Save</button>
+                    <button onClick={() => { setShowAdd(false); setEditing(null); }} className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<VehicleManagement />);
+    </script>
+  </body>
+</html>

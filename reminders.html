@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BottyOtty - Tech Reminders</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+      * { font-family: "Inter", sans-serif; }
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+      .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+      const STORAGE_KEY = "bottyotty-tech-reminders";
+
+      function TechReminders() {
+        const [reminders, setReminders] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+        const [showAdd, setShowAdd] = useState(false);
+        const [form, setForm] = useState({ title: "", description: "", tech: "", dueDate: "", priority: "medium", completed: false, category: "general" });
+
+        useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders)); }, [reminders]);
+
+        const addReminder = () => {
+          if (!form.title || !form.tech) return alert("Title and technician required");
+          setReminders([...reminders, { ...form, id: Date.now(), createdAt: new Date().toISOString() }]);
+          setForm({ title: "", description: "", tech: "", dueDate: "", priority: "medium", completed: false, category: "general" });
+          setShowAdd(false);
+        };
+
+        const toggleComplete = (id) => {
+          setReminders(reminders.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
+        };
+
+        const deleteReminder = (id) => {
+          if (confirm("Delete this reminder?")) setReminders(reminders.filter(r => r.id !== id));
+        };
+
+        const activeReminders = reminders.filter(r => !r.completed);
+        const completedReminders = reminders.filter(r => r.completed);
+        const overdueReminders = activeReminders.filter(r => r.dueDate && new Date(r.dueDate) < new Date());
+
+        return (
+          <div className="min-h-screen p-8">
+            <div className="glass rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="/mnt/user-data/uploads/Botty_Otty_Logo.png" alt="Logo" className="w-16 h-16" onError={e => e.target.style.display='none'} />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white">🔔 Tech Reminders</h1>
+                    <p className="text-gray-200 text-sm">Task reminders for technicians</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a href="dashboard.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">🏠 Dashboard</a>
+                  <a href="admin.html" className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg text-sm font-medium">⚙️ Admin</a>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Active</p>
+                <p className="text-5xl font-bold text-blue-400">{activeReminders.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Overdue</p>
+                <p className="text-5xl font-bold text-red-400">{overdueReminders.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Completed</p>
+                <p className="text-5xl font-bold text-green-400">{completedReminders.length}</p>
+              </div>
+              <div className="glass rounded-xl p-6 text-center">
+                <p className="text-gray-300 text-sm mb-2">Total</p>
+                <p className="text-5xl font-bold text-white">{reminders.length}</p>
+              </div>
+            </div>
+
+            <button onClick={() => setShowAdd(true)} className="w-full mb-6 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg">
+              ➕ Add Reminder
+            </button>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">Active Reminders</h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {activeReminders.map(r => (
+                    <div key={r.id} className={\`p-4 rounded-lg \${r.priority === 'high' ? 'bg-red-900 bg-opacity-30 border-l-4 border-red-500' : r.priority === 'medium' ? 'bg-yellow-900 bg-opacity-30 border-l-4 border-yellow-500' : 'bg-blue-900 bg-opacity-30 border-l-4 border-blue-500'}\`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-white font-bold">{r.title}</h3>
+                        <div className="flex gap-1">
+                          <button onClick={() => toggleComplete(r.id)} className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs">✓</button>
+                          <button onClick={() => deleteReminder(r.id)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs">×</button>
+                        </div>
+                      </div>
+                      <p className="text-gray-200 text-sm mb-2">{r.description}</p>
+                      <div className="text-xs text-gray-400">
+                        <span>👤 {r.tech}</span>
+                        {r.dueDate && <span className="ml-3">📅 Due: {r.dueDate}</span>}
+                        <span className="ml-3">📂 {r.category}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">Completed</h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {completedReminders.map(r => (
+                    <div key={r.id} className="p-4 rounded-lg bg-green-900 bg-opacity-30">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-white font-bold line-through opacity-60">{r.title}</h3>
+                        <div className="flex gap-1">
+                          <button onClick={() => toggleComplete(r.id)} className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs">↩</button>
+                          <button onClick={() => deleteReminder(r.id)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs">×</button>
+                        </div>
+                      </div>
+                      <p className="text-gray-300 text-sm opacity-60">{r.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {showAdd && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="glass rounded-2xl p-6 max-w-2xl w-full">
+                  <h3 className="text-2xl font-bold text-white mb-6">Add Tech Reminder</h3>
+                  <div className="space-y-4">
+                    <input placeholder="Title *" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <textarea placeholder="Description" value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" rows="3" />
+                    <input placeholder="Technician Name *" value={form.tech} onChange={e => setForm({...form, tech: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <input type="date" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30" />
+                    <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+                    <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg border border-white border-opacity-30">
+                      <option value="general">General</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="training">Training</option>
+                      <option value="paperwork">Paperwork</option>
+                      <option value="equipment">Equipment</option>
+                    </select>
+                    <div className="flex gap-2">
+                      <button onClick={addReminder} className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Save Reminder</button>
+                      <button onClick={() => setShowAdd(false)} className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<TechReminders />);
+    </script>
+  </body>
+</html>

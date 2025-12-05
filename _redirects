@@ -1,0 +1,43 @@
+# Netlify Redirects Configuration
+# This allows clean URLs without .html extensions
+
+# Clean URLs (no .html extension needed)
+/                      /dashboard.html           200
+/dashboard             /dashboard.html           200
+/admin                 /admin.html               200
+/reports               /reports.html             200
+/help                  /help.html                200
+/newsletter            /newsletter.html          200
+/quick-launch          /quick-launch.html        200
+
+# Widget clean URLs
+/calendar              /calendar.html            200
+/feedback              /feedback.html            200
+/inventory             /inventory.html           200
+/leads                 /leads.html               200
+/alerts                /alerts.html              200
+/moveup                /moveup.html              200
+/safety                /safety.html              200
+/reminders             /reminders.html           200
+/vehicles              /vehicles.html            200
+
+# Backwards compatibility - old file names redirect to new ones
+/BottyOtty%20Dashboard%20v18.html              /dashboard.html           301
+/Admin%20Panel%20v18.html                       /admin.html               301
+/BottyOtty%20Reports%20v18.html                /reports.html             301
+/BottyOtty%20Help%20&%20User%20Guide%20v18.html /help.html               301
+/BottyOtty%20Newsletter%20v18.html             /newsletter.html          301
+/Quick%20Launch%20v18.html                      /quick-launch.html        301
+
+/Company%20Calendar%20v18.html                  /calendar.html            301
+/Customer%20Feedback%20Tracker%20v18.html      /feedback.html            301
+/Inventory%20Widget%20v18.html                  /inventory.html           301
+/Lead%20Sites%20Switchboard%20v18.html         /leads.html               301
+/Office%20Alerts%20v18.html                     /alerts.html              301
+/Pest%20Move-Up%20List%20v18.html              /moveup.html              301
+/Safety%20Management%20v18.html                 /safety.html              301
+/Tech%20Reminders%20v18.html                    /reminders.html           301
+/Vehicle%20Management%20v18.html                /vehicles.html            301
+
+# Fallback - any unmatched path goes to dashboard
+/*                     /dashboard.html           404
