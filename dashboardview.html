@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paragon Task Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* PARAGON BRAND COLORS - LIGHT MODE (Default) */
+            --bg-body: #F9FAFB;
+            --bg-sidebar: #001541; /* Dark Navy Sidebar for contrast */
+            --bg-panel: #FFFFFF;
+            --text-primary: #001541; /* Dark Navy Text */
+            --text-secondary: #566685; /* Light Navy Text */
+            --border-color: #E5E7EB;
+            --accent-orange: #ff8b01;
+            --accent-orange-light: #ffbc6c;
+            --accent-navy: #324973;
+            
+            --glass-border: 1px solid rgba(0, 0, 0, 0.05);
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --hover-bg: #F3F4F6;
+        }
+
+        [data-theme="dark"] {
+            /* PARAGON BRAND COLORS - DARK MODE */
+            --bg-body: #001541; /* Dark Navy Background */
+            --bg-sidebar: #001133; /* Slightly darker for sidebar */
+            --bg-panel: rgba(50, 73, 115, 0.25); /* Glassy Navy */
+            --text-primary: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-orange: #f37b28; /* Slightly darker orange for dark mode */
+            --accent-orange-light: #ff8b01;
+            --accent-navy: #324973;
+
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--accent-navy); border-radius: 3px; }
+        
+        /* Theme Utilities */
+        .theme-panel {
+            background: var(--bg-panel);
+            border: var(--glass-border);
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .text-theme-secondary { color: var(--text-secondary); }
+        .hover-theme-bg:hover { background-color: var(--hover-bg); }
+        .border-theme { border-color: var(--border-color); }
+
+        /* Specific Paragon Gradients */
+        .orange-gradient-card {
+            background: linear-gradient(135deg, #f37b28 0%, #ff8b01 100%);
+        }
+        
+        .navy-gradient-card {
+            background: linear-gradient(135deg, #324973 0%, #001541 100%);
+        }
+
+        /* Calendar Styles */
+        .calendar-day { 
+            @apply w-8 h-8 flex items-center justify-center text-xs rounded-full cursor-pointer transition-colors; 
+            color: var(--text-secondary);
+        }
+        .calendar-day:hover { background-color: var(--hover-bg); color: var(--text-primary); }
+        .calendar-day.active { 
+            background-color: var(--accent-orange); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(255, 139, 1, 0.4); 
+        }
+
+        /* Sidebar Link Styles */
+        .nav-link {
+            color: rgba(255, 255, 255, 0.6);
+            transition: all 0.2s;
+        }
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+            color: white;
+            background-color: var(--accent-orange); /* Active state is Orange */
+            box-shadow: 0 4px 12px rgba(255, 139, 1, 0.3);
+        }
+        /* In light mode sidebar is dark, in dark mode sidebar is dark. Text is always light in sidebar */
+        
+        /* Search Input */
+        .search-input {
+            background-color: var(--hover-bg);
+            color: var(--text-primary);
+            border: 1px solid transparent;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+            background-color: var(--bg-panel);
+        }
+        .search-input::placeholder { color: var(--text-secondary); }
+
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden selection:bg-orange-200 selection:text-orange-900">
+
+    <!-- SIDEBAR navigation (Always Dark Navy for Branding) -->
+    <aside class="w-64 flex flex-col border-r border-theme flex-shrink-0 z-20 transition-colors duration-300" style="background-color: var(--bg-sidebar); border-right-color: rgba(255,255,255,0.05);">
+        <!-- Logo -->
+        <div class="h-20 flex items-center px-8 border-b border-white/10">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 text-white" style="background-color: var(--accent-orange);">
+                <i class="fas fa-shield-alt text-sm"></i>
+            </div>
+            <span class="text-white font-bold text-lg tracking-wide">Paragon</span>
+        </div>
+
+        <!-- Menu -->
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-3">Overview</div>
+            
+            <a href="#" class="nav-link active flex items-center px-4 py-3 text-sm font-medium rounded-xl">
+                <i class="fas fa-th-large w-6"></i>
+                Dashboard
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-3 text-sm font-medium rounded-xl">
+                <i class="fas fa-check-square w-6"></i>
+                Tasks
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-3 text-sm font-medium rounded-xl">
+                <i class="fas fa-chart-bar w-6"></i>
+                Reports
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-3 text-sm font-medium rounded-xl">
+                <i class="fas fa-book w-6"></i>
+                Knowledge Base
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-3 text-sm font-medium rounded-xl">
+                <i class="fas fa-calendar-alt w-6"></i>
+                Calendar
+            </a>
+
+            <!-- Teams Section -->
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mt-8 mb-3">Departments</div>
+            <a href="#" class="nav-link flex items-center px-4 py-2 text-sm font-medium rounded-xl">
+                <span class="w-2 h-2 rounded-full bg-red-500 mr-4 shadow-lg shadow-red-500/50"></span>
+                Operations
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-2 text-sm font-medium rounded-xl">
+                <span class="w-2 h-2 rounded-full bg-yellow-500 mr-4 shadow-lg shadow-yellow-500/50"></span>
+                Sales
+            </a>
+            <a href="#" class="nav-link flex items-center px-4 py-2 text-sm font-medium rounded-xl">
+                <span class="w-2 h-2 rounded-full bg-green-500 mr-4 shadow-lg shadow-green-500/50"></span>
+                Tech
+            </a>
+        </nav>
+
+        <!-- User -->
+        <div class="p-4 border-t border-white/10">
+            <a href="#" class="nav-link flex items-center px-4 py-2 text-sm font-medium rounded-xl">
+                <i class="fas fa-sign-out-alt w-6"></i>
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        
+        <!-- Header -->
+        <header class="h-20 flex items-center justify-between px-8 z-10 border-b border-theme bg-[var(--bg-body)] transition-colors duration-300">
+            <div>
+                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Hi, John!</h1>
+                <p class="text-xs text-theme-secondary">Here's your Paragon operational overview.</p>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <!-- Search -->
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-theme-secondary"></i>
+                    </span>
+                    <input type="text" placeholder="Search knowledge base..." class="search-input text-sm rounded-full pl-10 pr-4 py-2.5 w-64 transition-all">
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center space-x-4">
+                    <!-- Theme Toggle -->
+                    <button id="themeToggle" class="w-10 h-10 rounded-full hover-theme-bg flex items-center justify-center text-theme-secondary transition-colors" onclick="toggleTheme()">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                    
+                    <button class="w-10 h-10 rounded-full hover-theme-bg flex items-center justify-center text-theme-secondary transition-colors relative">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2" style="border-color: var(--bg-body);"></span>
+                    </button>
+                    
+                    <!-- Profile -->
+                    <div class="flex items-center space-x-2 hover-theme-bg rounded-full pl-1 pr-3 py-1 cursor-pointer transition-colors">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="User" class="w-8 h-8 rounded-full bg-gray-200">
+                        <span class="text-sm font-medium" style="color: var(--text-primary);">John</span>
+                        <i class="fas fa-chevron-down text-xs text-theme-secondary ml-1"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="flex-1 overflow-y-auto px-8 pb-8 pt-6">
+            <div class="grid grid-cols-12 gap-8">
+                
+                <!-- LEFT COLUMN (Stats + Tasks) -->
+                <div class="col-span-12 lg:col-span-8 space-y-8">
+                    
+                    <!-- Stats Row -->
+                    <div class="grid grid-cols-3 gap-6">
+                        <!-- Card 1: Completed (Orange Gradient) -->
+                        <div class="orange-gradient-card rounded-2xl p-6 relative overflow-hidden shadow-lg shadow-orange-500/20 group cursor-pointer transition-transform hover:-translate-y-1">
+                            <!-- Background Decor -->
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+                            
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-white backdrop-blur-sm">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <button class="text-white/60 hover:text-white"><i class="fas fa-ellipsis-v"></i></button>
+                            </div>
+                            <h2 class="text-4xl font-bold text-white mb-1">18</h2>
+                            <p class="text-white/90 text-sm font-medium">Completed Tasks</p>
+                        </div>
+
+                        <!-- Card 2: In Progress (Navy Gradient) -->
+                        <div class="navy-gradient-card rounded-2xl p-6 relative overflow-hidden shadow-lg shadow-indigo-500/20 group cursor-pointer transition-transform hover:-translate-y-1">
+                            <!-- Background Decor -->
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-white backdrop-blur-sm">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                                <button class="text-white/60 hover:text-white"><i class="fas fa-ellipsis-v"></i></button>
+                            </div>
+                            <h2 class="text-4xl font-bold text-white mb-1">13</h2>
+                            <p class="text-white/90 text-sm font-medium">In Progress</p>
+                        </div>
+
+                        <!-- Card 3: Team Stats (Theme Panel) -->
+                        <div class="theme-panel rounded-2xl p-6 flex flex-col justify-center transition-colors duration-300">
+                            <h3 class="text-theme-secondary text-sm font-medium mb-4">Team Availability</h3>
+                            <div class="flex -space-x-3 mb-4">
+                                <img class="w-10 h-10 rounded-full border-2" style="border-color: var(--bg-panel);" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="">
+                                <img class="w-10 h-10 rounded-full border-2" style="border-color: var(--bg-panel);" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="">
+                                <img class="w-10 h-10 rounded-full border-2" style="border-color: var(--bg-panel);" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mark" alt="">
+                                <img class="w-10 h-10 rounded-full border-2" style="border-color: var(--bg-panel);" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jonas" alt="">
+                                <div class="w-10 h-10 rounded-full border-2 text-white text-xs font-bold flex items-center justify-center" style="border-color: var(--bg-panel); background-color: var(--accent-navy);">+3</div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-2xl font-bold" style="color: var(--text-primary);">124</span>
+                                <span class="text-xs px-2 py-1 rounded font-medium" style="background-color: var(--hover-bg); color: var(--text-secondary);">Hours logged</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Tasks Section -->
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-lg font-bold" style="color: var(--text-primary);">Priority Tasks</h2>
+                            <a href="#" class="text-xs hover:underline" style="color: var(--accent-orange);">View all</a>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-6">
+                            <!-- Task Card 1 -->
+                            <div class="theme-panel rounded-2xl p-5 hover-theme-bg transition-all group border-l-4" style="border-left-color: var(--accent-orange);">
+                                <div class="flex justify-between items-start mb-3">
+                                    <span class="px-2.5 py-1 rounded text-[10px] font-bold" style="background-color: rgba(243, 123, 40, 0.1); color: var(--accent-orange);">2 Days Left</span>
+                                    <button class="text-theme-secondary hover:text-primary"><i class="fas fa-ellipsis-v"></i></button>
+                                </div>
+                                <h3 class="font-semibold text-base mb-1 transition-colors" style="color: var(--text-primary);">Q3 Financial Report</h3>
+                                <p class="text-theme-secondary text-xs mb-4 line-clamp-2">Compile data from sales and operations departments.</p>
+                                
+                                <!-- Progress -->
+                                <div class="w-full h-1.5 rounded-full mb-2" style="background-color: var(--hover-bg);">
+                                    <div class="h-1.5 rounded-full" style="width: 75%; background-color: var(--accent-navy);"></div>
+                                </div>
+                                <div class="flex justify-between items-center text-[10px] text-theme-secondary mb-4">
+                                    <span>Progress</span>
+                                    <span class="font-bold" style="color: var(--text-primary);">75%</span>
+                                </div>
+
+                                <div class="flex items-center justify-between border-t pt-3 border-theme">
+                                    <div class="flex -space-x-2">
+                                        <img class="w-6 h-6 rounded-full border border-theme" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="">
+                                        <img class="w-6 h-6 rounded-full border border-theme" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="">
+                                    </div>
+                                    <span class="text-xs text-theme-secondary">Oct 24</span>
+                                </div>
+                            </div>
+
+                            <!-- Task Card 2 (Image style) -->
+                            <div class="theme-panel rounded-2xl p-5 hover-theme-bg transition-all relative overflow-hidden group">
+                                <div class="absolute inset-0 bg-gradient-to-t opacity-90 z-10" style="background: linear-gradient(to top, var(--bg-panel), transparent);"></div>
+                                <img src="https://images.unsplash.com/photo-1586769852044-692d6e3703f0?q=80&w=1000&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-500" alt="">
+                                
+                                <div class="relative z-20 flex flex-col h-full justify-between">
+                                    <div class="flex justify-between items-start">
+                                        <span class="px-2.5 py-1 rounded text-[10px] font-bold bg-green-500/20 text-green-600 backdrop-blur-md">Review</span>
+                                        <button class="text-theme-secondary"><i class="fas fa-ellipsis-v"></i></button>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 class="font-semibold text-base mb-1" style="color: var(--text-primary);">New Branch Setup</h3>
+                                        <p class="text-xs mb-3 text-theme-secondary">Grand Prairie location docs.</p>
+                                        <div class="flex items-center justify-between text-xs text-theme-secondary">
+                                            <span>Nov 01</span>
+                                            <span class="text-green-500 font-bold"><i class="fas fa-check-circle mr-1"></i> Ready</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task Card 3 -->
+                            <div class="theme-panel rounded-2xl p-5 hover-theme-bg transition-all group border-l-4" style="border-left-color: var(--accent-navy);">
+                                <div class="flex justify-between items-start mb-3">
+                                    <span class="px-2.5 py-1 rounded text-[10px] font-bold" style="background-color: rgba(50, 73, 115, 0.1); color: var(--accent-navy);">5 Days Left</span>
+                                    <button class="text-theme-secondary hover:text-primary"><i class="fas fa-ellipsis-v"></i></button>
+                                </div>
+                                <h3 class="font-semibold text-base mb-1 transition-colors" style="color: var(--text-primary);">Vehicle Maintenance</h3>
+                                <p class="text-theme-secondary text-xs mb-4 line-clamp-2">Schedule service for Fleet #42 and #45.</p>
+                                
+                                <!-- Progress -->
+                                <div class="w-full h-1.5 rounded-full mb-2" style="background-color: var(--hover-bg);">
+                                    <div class="h-1.5 rounded-full" style="width: 20%; background-color: var(--accent-orange);"></div>
+                                </div>
+                                <div class="flex justify-between items-center text-[10px] text-theme-secondary mb-4">
+                                    <span>Progress</span>
+                                    <span class="font-bold" style="color: var(--text-primary);">20%</span>
+                                </div>
+
+                                <div class="flex items-center justify-between border-t pt-3 border-theme">
+                                    <div class="flex -space-x-2">
+                                        <img class="w-6 h-6 rounded-full border border-theme" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mark" alt="">
+                                    </div>
+                                    <span class="text-xs text-theme-secondary">Oct 28</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN (Utilities) -->
+                <div class="col-span-12 lg:col-span-4 space-y-8">
+                    
+                    <!-- Timer Widget -->
+                    <div class="navy-gradient-card rounded-2xl p-6 relative overflow-hidden text-white">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-semibold text-white/90">Time Tracker</h3>
+                            <button class="text-white/60 hover:text-white"><i class="fas fa-ellipsis-h"></i></button>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="text-4xl font-mono font-bold tracking-widest">
+                                02:36:19
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button class="flex-1 text-white py-3 rounded-xl flex items-center justify-center transition-colors shadow-lg font-semibold" style="background-color: var(--accent-orange);">
+                                <i class="fas fa-pause mr-2"></i> Pause
+                            </button>
+                            <button class="w-12 bg-white/10 hover:bg-white/20 text-white rounded-xl flex items-center justify-center transition-colors">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Widget -->
+                    <div class="theme-panel rounded-2xl p-6 transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-semibold" style="color: var(--text-primary);">Oct 2025</h3>
+                            <div class="flex space-x-1">
+                                <button class="w-6 h-6 rounded hover-theme-bg flex items-center justify-center text-xs text-theme-secondary"><i class="fas fa-chevron-left"></i></button>
+                                <button class="w-6 h-6 rounded hover-theme-bg flex items-center justify-center text-xs text-theme-secondary"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        
+                        <!-- Days Header -->
+                        <div class="grid grid-cols-7 gap-1 mb-2 text-center">
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">S</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">M</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">T</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">W</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">T</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">F</span>
+                            <span class="text-[10px] text-theme-secondary uppercase font-bold">S</span>
+                        </div>
+                        
+                        <!-- Days Grid -->
+                        <div class="grid grid-cols-7 gap-1 text-center text-sm">
+                            <!-- Empty days -->
+                            <span></span><span></span><span></span><span></span><span></span>
+                            <span class="calendar-day">1</span>
+                            <span class="calendar-day">2</span>
+                            <span class="calendar-day">3</span>
+                            <span class="calendar-day">4</span>
+                            <span class="calendar-day">5</span>
+                            <span class="calendar-day">6</span>
+                            <span class="calendar-day">7</span>
+                            <span class="calendar-day active">8</span>
+                            <span class="calendar-day">9</span>
+                            <span class="calendar-day">10</span>
+                            <span class="calendar-day">11</span>
+                            <span class="calendar-day">12</span>
+                            <span class="calendar-day">13</span>
+                            <span class="calendar-day">14</span>
+                            <span class="calendar-day">15</span>
+                            <span class="calendar-day">16</span>
+                            <span class="calendar-day">17</span>
+                            <span class="calendar-day">18</span>
+                            <span class="calendar-day">19</span>
+                            <span class="calendar-day">20</span>
+                            <span class="calendar-day">21</span>
+                            <span class="calendar-day">22</span>
+                            <span class="calendar-day">23</span>
+                            <span class="calendar-day">24</span>
+                            <span class="calendar-day">25</span>
+                            <span class="calendar-day">26</span>
+                            <span class="calendar-day">27</span>
+                            <span class="calendar-day">28</span>
+                            <span class="calendar-day">29</span>
+                            <span class="calendar-day">30</span>
+                        </div>
+                    </div>
+
+                    <!-- Messages Widget -->
+                    <div class="theme-panel rounded-2xl p-6 transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold" style="color: var(--text-primary);">Team Chat</h3>
+                            <a href="#" class="text-xs hover:underline" style="color: var(--accent-orange);">View all</a>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between group cursor-pointer hover-theme-bg p-2 rounded-lg -mx-2 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="relative">
+                                        <img class="w-10 h-10 rounded-full bg-gray-700" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ann" alt="">
+                                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 rounded-full" style="border-color: var(--bg-panel);"></span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-medium transition-colors" style="color: var(--text-primary);">Ann Johnson</h4>
+                                        <p class="text-[10px] text-theme-secondary truncate w-32">Updated the client file.</p>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-theme-secondary">15:18</span>
+                            </div>
+
+                            <div class="flex items-center justify-between group cursor-pointer hover-theme-bg p-2 rounded-lg -mx-2 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="relative">
+                                        <img class="w-10 h-10 rounded-full bg-gray-700" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mike" alt="">
+                                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-400 border-2 rounded-full" style="border-color: var(--bg-panel);"></span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-medium transition-colors" style="color: var(--text-primary);">Mike T.</h4>
+                                        <p class="text-[10px] text-theme-secondary truncate w-32">On site at 1400 Main.</p>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-theme-secondary">13:15</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Simple Theme Toggler logic
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('themeIcon');
+            
+            // Check current theme
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                // Switch to Light
+                body.removeAttribute('data-theme');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                // Switch to Dark
+                body.setAttribute('data-theme', 'dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+    </script>
+</body>
+</html>
