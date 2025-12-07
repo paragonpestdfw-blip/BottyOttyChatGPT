@@ -1,0 +1,3 @@
+# Temporary and backup files
+*.backup
+*_temp.html
