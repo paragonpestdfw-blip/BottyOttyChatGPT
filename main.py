@@ -1347,7 +1347,92 @@ async def exportfiles(
     await interaction.followup.send(
         f"✅ Found {file_count} **file** attachment(s) (non-images) in "
         f"{target_channel.mention} ({range_text}, scanned {total_scanned} messages). "
-        f"I’ve DM’d you the NDJSON export.",
+        f"I've DM'd you the NDJSON export.",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="members",
+    description="Get a list of all server members. Sends an ephemeral message and DMs you the full list.",
+)
+@app_commands.describe(
+    include_bots="Include bot accounts in the list (default: False).",
+)
+async def members_command(
+    interaction: discord.Interaction,
+    include_bots: bool = False,
+):
+    """Export server member list via ephemeral message and DM."""
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "❌ You need administrator permissions to use this command.",
+            ephemeral=True,
+        )
+        return
+
+    guild = interaction.guild
+    if guild is None:
+        await interaction.response.send_message(
+            "❌ This command must be run in a server, not in DMs.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    # Fetch all members
+    members_list = []
+    async for member in guild.fetch_members(limit=None):
+        if not include_bots and member.bot:
+            continue
+        members_list.append(member)
+
+    # Sort by display name
+    members_list.sort(key=lambda m: m.display_name.lower())
+
+    # Build the report
+    lines = []
+    lines.append(f"Server: {guild.name}")
+    lines.append(f"Total Members: {len(members_list)}")
+    lines.append("")
+    lines.append("=" * 50)
+    lines.append("")
+
+    for member in members_list:
+        status = str(member.status) if hasattr(member, 'status') else "unknown"
+        roles = ", ".join([r.name for r in member.roles if r.name != "@everyone"]) or "No roles"
+        joined = member.joined_at.strftime("%Y-%m-%d") if member.joined_at else "Unknown"
+        lines.append(f"• {member.display_name}")
+        lines.append(f"  Username: {member.name}#{member.discriminator}")
+        lines.append(f"  ID: {member.id}")
+        lines.append(f"  Joined: {joined}")
+        lines.append(f"  Roles: {roles}")
+        lines.append("")
+
+    full_report = "\n".join(lines)
+
+    # Chunk the report for DM (Discord has 2000 char limit)
+    chunks = []
+    remaining = full_report
+    while remaining:
+        chunk = remaining[:1900]
+        last_nl = chunk.rfind("\n")
+        if last_nl != -1:
+            chunk, remaining = remaining[:last_nl], remaining[last_nl + 1:]
+        else:
+            remaining = remaining[1900:]
+        chunks.append(chunk)
+
+    # Send DM with full list
+    for chunk in chunks:
+        await interaction.user.send(f"```{chunk}```")
+
+    # Send ephemeral summary
+    await interaction.followup.send(
+        f"✅ Found **{len(members_list)}** member(s) in **{guild.name}**.\n"
+        f"I've DM'd you the full member list with details.",
         ephemeral=True,
     )
 
@@ -2891,9 +2976,82 @@ async def on_message(message):
         for chunk in chunks:
             await message.author.send(f"```{chunk}```")
 
-        await message.channel.send("✅ I’ve DM’d you the server structure.")
+        await message.channel.send("✅ I've DM'd you the server structure.")
         return
-    
+
+    # Handle @members command (admin only) - lists all server members
+    if message.content.strip().lower().startswith('@members'):
+        if not message.author.guild_permissions.administrator:
+            await message.channel.send("❌ You need administrator permissions to use this command.")
+            return
+
+        guild = message.guild
+        if guild is None:
+            await message.channel.send("This command must be run in a server, not in DMs.")
+            return
+
+        # Check for optional flags
+        content_lower = message.content.strip().lower()
+        include_bots = 'bots' in content_lower or 'all' in content_lower
+
+        await message.channel.send("📋 Fetching member list... I'll DM you the results.")
+
+        # Fetch all members
+        members_list = []
+        async for member in guild.fetch_members(limit=None):
+            if not include_bots and member.bot:
+                continue
+            members_list.append(member)
+
+        # Sort by display name
+        members_list.sort(key=lambda m: m.display_name.lower())
+
+        # Build the report
+        lines = []
+        lines.append(f"Server: {guild.name}")
+        lines.append(f"Total Members: {len(members_list)}")
+        lines.append("")
+        lines.append("=" * 50)
+        lines.append("")
+
+        for member in members_list:
+            roles = ", ".join([r.name for r in member.roles if r.name != "@everyone"]) or "No roles"
+            joined = member.joined_at.strftime("%Y-%m-%d") if member.joined_at else "Unknown"
+            lines.append(f"• {member.display_name}")
+            lines.append(f"  Username: {member.name}#{member.discriminator}")
+            lines.append(f"  ID: {member.id}")
+            lines.append(f"  Joined: {joined}")
+            lines.append(f"  Roles: {roles}")
+            lines.append("")
+
+        full_report = "\n".join(lines)
+
+        # Chunk the report for DM (Discord has 2000 char limit)
+        chunks = []
+        remaining = full_report
+        while remaining:
+            chunk = remaining[:1900]
+            last_nl = chunk.rfind("\n")
+            if last_nl != -1:
+                chunk, remaining = remaining[:last_nl], remaining[last_nl + 1:]
+            else:
+                remaining = remaining[1900:]
+            chunks.append(chunk)
+
+        # Send DM with full list
+        for chunk in chunks:
+            await message.author.send(f"```{chunk}```")
+
+        await message.channel.send(f"✅ I've DM'd you the member list ({len(members_list)} members).")
+
+        # Try to delete the command message to keep the channel clean
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass
+
+        return
+
     # Handle @hey command
     if message.content.startswith('@hey '):
         task_content = message.content[len('@hey '):].strip()
